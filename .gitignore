@@ -3,3 +3,8 @@ target
 result
 *.zip
 .~lock.*.ods#
+
+__pycache__/
+*.pyc
+
+example/*.json
