@@ -1,9 +1,9 @@
 ---
 name: Bug Report
 about: Signaler un bug dans le projet
-title: '[BUG] '
-labels: 'bug, needs-triage'
-assignees: ''
+title: "[BUG] "
+labels: "bug, needs-triage"
+assignees: ""
 ---
 
 # 🐛 Bug Report
@@ -37,10 +37,10 @@ Collez ici les logs d'erreur si applicable
 
 ## 🌍 Environnement
 
--   OS: [ex: macOS 14.0]
--   Rust version: [ex: 1.70.0]
--   Cargo version: [ex: 1.70.0]
--   Commit/Tag: [ex: abc123 ou v1.0.0]
+- OS: [ex: macOS 14.0]
+- Rust version: [ex: 1.70.0]
+- Cargo version: [ex: 1.70.0]
+- Commit/Tag: [ex: abc123 ou v1.0.0]
 
 ## 📋 Informations supplémentaires
 
@@ -50,6 +50,6 @@ Collez ici les logs d'erreur si applicable
 
 <!-- Si vous avez des idées sur la cause du problème -->
 
--   [ ] J'ai vérifié les issues existantes
--   [ ] J'ai testé avec la dernière version
--   [ ] Le problème est reproductible de façon consistante
+- [ ] J'ai vérifié les issues existantes
+- [ ] J'ai testé avec la dernière version
+- [ ] Le problème est reproductible de façon consistante
