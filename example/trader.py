@@ -263,6 +263,32 @@ class Game:
         self.wait_idle(self.sid) # The ship will have the state "Idle" once the cargo is full
         print("[*] The cargo is full, stopping mining process")
 
+    def upgrade_trader(self):
+        station = self.get(f"/station/{self.sta}")
+        ship = self.get(f"/ship/{self.sid}")
+
+        if ship["position"] != station["position"]:
+            self.travel(ship["id"], station["position"])
+
+        while True:
+            player_status = self.get(f"/player/{self.pid}")
+            try:
+                money = float(player_status["money"])
+            except (ValueError, TypeError):
+                print("[!] Failed to parse money value.")
+                return
+
+            if money < 5000:
+                print(f"[!] Not enough money to upgrade the trader, you have {round(money,2)} credits")
+                break
+
+            try:
+                upgrade = self.get(f"/station/{self.sta}/crew/upgrade/trader")
+                print(f"[*] Upgraded trader to level {upgrade['level']} for {upgrade['removed_money']} credits")
+            except SimeisError as e:
+                print(f"[!] Trader upgrade failed: {e}")
+                break
+
     # - Go back to the station
     # - Unload all the cargo
     # - Sell it on the market
@@ -289,6 +315,40 @@ class Game:
         self.ship_repair(self.sid)
         self.ship_refuel(self.sid)
 
+        
+    def upgrade_module(self):
+        ship = self.get(f"/ship/{self.sid}")
+        station = self.get(f"/station/{self.sta}")
+
+        if ship["position"] != station["position"]:
+            self.travel(self.sid, station["position"])
+
+        # Appel de l'API pour récupérer les modules à upgrader
+        modules = self.get(f"/station/{self.sta}/shop/modules/{self.sid}/upgrade")
+
+        # ✅ Vérifie que 'modules' est bien une liste
+        if not isinstance(modules, list) or len(modules) == 0:
+            print("[!] Aucun module à améliorer ou réponse inattendue :", modules)
+            return
+
+        # On prend le premier module à améliorer
+        mod = modules[0]
+        mod_id = mod["id"]
+        mod_type = mod["modtype"]
+        price = mod["upgrade_price"]
+
+        # Vérifie qu'on a assez d'argent
+        money = float(self.get(f"/player/{self.pid}")["money"])
+        if money < price:
+            print(f"[!] Pas assez d'argent pour upgrader le module {mod_type}. Il faut {price} crédits.")
+            return
+
+        # Lance l'upgrade
+        upgrade = self.get(f"/station/{self.sta}/shop/modules/{self.sid}/upgrade/{mod_id}")
+        print(f"[*] Module {mod_type} amélioré pour {upgrade['removed_money']} crédits. Nouveau niveau : {upgrade['level']}")
+
+
+
 if __name__ == "__main__":
     name = sys.argv[1]
     game = Game(name)
@@ -298,5 +358,6 @@ if __name__ == "__main__":
         print("")
         game.disp_status()
         game.go_mine()
-        game.disp_status()
         game.go_sell()
+        game.upgrade_trader()
+        game.upgrade_module()

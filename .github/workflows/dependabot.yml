@@ -1,0 +1,56 @@
+name: diy-dependabot
+
+on:
+    schedule:
+        - cron: '0 5 * * *' # Chaque jour à 5h UTC
+    workflow_dispatch:
+
+jobs:
+    update-dependencies:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: 📁 Clone repository manuellement
+              run: |
+                  git clone https://github.com/${{ github.repository }} .
+                  git checkout ${{ github.ref_name }}
+
+            - name: 🔧 Setup Rust
+              run: |
+                  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+                  source $HOME/.cargo/env
+                  rustup update
+                  rustup component add rustfmt
+
+            - name: 📦 Install cargo-update
+              run: |
+                  source $HOME/.cargo/env
+                  cargo install cargo-update
+
+            - name: 🔄 Update dependencies
+              run: |
+                  source $HOME/.cargo/env
+                  cargo install-update -a
+
+            - name: 📊 Check if dependencies changed
+              run: |
+                  git config user.name "diy-bot"
+                  git config user.email "diy-bot@example.com"
+                  git add .
+                  git diff --cached --quiet || git commit -m "chore: update Rust dependencies"
+
+            - name: 🚀 Create Pull Request
+              if: success() # Seulement si des changements ont été commités
+              run: |
+                  BRANCH="bot/update-deps-$(date +'%Y%m%d')"
+                  git checkout -b "$BRANCH"
+                  git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} "$BRANCH"
+
+                  gh auth setup-git
+                  gh pr create --title "chore: update Rust dependencies" \
+                               --body "Mise à jour automatique des dépendances avec cargo-update" \
+                               --label "bot/update" \
+                               --head "$BRANCH" \
+                               --base "main"
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
