@@ -1,10 +1,28 @@
-target
+# === Rust (cargo) ===
+/target
 .cargohome
 result
-*.zip
-.~lock.*.ods#
 
+# Lock files or temp
+*.lock
+*.zip
+
+# === Typst ===
+*.pdf
+
+# === Python (si nécessaire) ===
 __pycache__/
 *.pyc
 
+# === CMake / Make ===
+/build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# === LibreOffice (souvent inutile mais présent) ===
+.~lock.*.ods#
+
+# === Fichiers d'exemple du projet ===
 example/*.json
