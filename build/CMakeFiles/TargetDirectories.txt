@@ -3,5 +3,6 @@
 /Users/valentin/kDrive/Ressources/Ynov/CI_CD/simeis/build/CMakeFiles/check.dir
 /Users/valentin/kDrive/Ressources/Ynov/CI_CD/simeis/build/CMakeFiles/test.dir
 /Users/valentin/kDrive/Ressources/Ynov/CI_CD/simeis/build/CMakeFiles/clean-all.dir
+/Users/valentin/kDrive/Ressources/Ynov/CI_CD/simeis/build/CMakeFiles/doc.dir
 /Users/valentin/kDrive/Ressources/Ynov/CI_CD/simeis/build/CMakeFiles/edit_cache.dir
 /Users/valentin/kDrive/Ressources/Ynov/CI_CD/simeis/build/CMakeFiles/rebuild_cache.dir

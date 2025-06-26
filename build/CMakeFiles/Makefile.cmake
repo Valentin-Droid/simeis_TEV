@@ -61,4 +61,5 @@ set(CMAKE_DEPEND_INFO_FILES
   "CMakeFiles/check.dir/DependInfo.cmake"
   "CMakeFiles/test.dir/DependInfo.cmake"
   "CMakeFiles/clean-all.dir/DependInfo.cmake"
+  "CMakeFiles/doc.dir/DependInfo.cmake"
   )
