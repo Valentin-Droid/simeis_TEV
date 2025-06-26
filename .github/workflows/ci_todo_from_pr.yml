@@ -20,6 +20,10 @@ jobs:
           git fetch origin main
           git diff origin/main...HEAD --unified=0 | grep '^+.*TODO' > new_todos.txt || true
           git diff origin/main...HEAD --name-only > changed_files.txt
+          
+      - name: 🏷️ Ensure "todo" label exists
+        run: |
+          gh label list | grep -q '^todo' || gh label create todo --description "Auto-created TODO item" --color FF8800
 
       - name: 🧠 Create one GitHub issue per new TODO
         env:
