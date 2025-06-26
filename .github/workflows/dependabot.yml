@@ -1,0 +1,47 @@
+name: diy-dependabot
+
+on:
+  schedule:
+    - cron: "0 8 * * 1" # Tous les lundis à 08h00 UTC
+  workflow_dispatch:
+
+jobs:
+  update-dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust
+        run: |
+          rustup update
+          rustup component add rustfmt
+
+      - name: 📦 Install cargo-update
+        run: cargo install cargo-update
+
+      - name: 🔄 Update dependencies
+        run: cargo install-update -a
+
+      - name: 📊 Check if dependencies changed
+        run: |
+          git config user.name "diy-bot"
+          git config user.email "diy-bot@example.com"
+          git add .
+          git diff --cached --quiet || git commit -m "chore: update Rust dependencies"
+
+      - name: 🚀 Create Pull Request
+        if: success() # Ne s’exécute que s’il y a eu un commit
+        run: |
+          BRANCH="bot/update-deps-$(date +'%Y%m%d')"
+          git checkout -b "$BRANCH"
+          git push origin "$BRANCH"
+
+          gh pr create --title "chore: update Rust dependencies" \
+                       --body "Mise à jour automatique des dépendances avec cargo-update" \
+                       --label "bot/update" \
+                       --head "$BRANCH" \
+                       --base "main"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
