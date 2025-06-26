@@ -1,0 +1,30 @@
+# Global owners - responsible for overall project architecture and decisions
+* @Valentin-Droid
+* @Zowx
+
+# Data layer - responsible for game data structures and logic
+/simeis-data/ @Valentin-Droid
+
+# Server layer - responsible for API and server logic
+/simeis-server/ @Valentin-Droid
+
+# Build system and configuration
+/Cargo.toml @Valentin-Droid
+/Cargo.lock @Valentin-Droid
+/CMakeLists.txt @Valentin-Droid
+
+# Documentation
+/README.md @Zowx
+/doc/ @Zowx
+
+# CI/CD and GitHub configuration
+/.github/ @Valentin-Droid
+
+# Examples and client code
+/example/ @Zowx
+
+# Note: Add additional team members as reviewers when the team grows
+# Example for future use:
+# /simeis-data/ @Valentin-Droid @data-team-lead
+# /simeis-server/ @Valentin-Droid @backend-team-lead
+# /.github/ @Valentin-Droid @devops-team-lead
