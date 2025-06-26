@@ -3,8 +3,7 @@ name: TODO to GitHub Issues (PR only)
 on:
   pull_request:
     branches: ["main"]
-  workflow_dispatch:
-    
+
 jobs:
   todo-from-pr:
     runs-on: ubuntu-latest
@@ -24,9 +23,12 @@ jobs:
 
       - name: 🧠 Create one GitHub issue per new TODO
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO_URL: ${{ github.server_url }}/${{ github.repository }}
           COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+
           while IFS= read -r todo_line; do
             file=$(git diff origin/main...HEAD --unified=0 | grep -B5 "$todo_line" | grep '^+++ b/' | sed 's|+++ b/||')
             lineno=$(git diff origin/main...HEAD --unified=0 | grep -A5 "$todo_line" | grep '^@@' | sed -E 's/^@@ \+([0-9]+).*/\1/' | head -n1)
@@ -34,23 +36,14 @@ jobs:
 
             todo=$(echo "$todo_line" | sed 's/^+//g' | xargs)
             url="${REPO_URL}/blob/${COMMIT_SHA}/${file}#L${lineno}"
-
             title="TODO in ${file} line ${lineno}"
-            
-            body=$(cat <<EOF
-            A new TODO was found in Pull Request #${{ github.event.pull_request.number }}:
 
-            📄 **File**: \`${file}\`  
-            🔢 **Line**: ${lineno}  
-            🔗 [View in GitHub](${url})
-
-            \`\`\`
-            $todo
-            \`\`\`
-
-            👉 Consider turning this into a properly tracked task.
-            EOF
-            )
+            body="A new TODO was found in Pull Request #${PR_NUMBER}:\n\n"
+            body+="📄 **File**: \`${file}\`\n"
+            body+="🔢 **Line**: ${lineno}\n"
+            body+="🔗 [View in GitHub](${url})\n\n"
+            body+="\`\`\`\n$todo\n\`\`\`\n\n"
+            body+="👉 Consider turning this into a properly tracked task."
 
             existing=$(gh issue list --state open --search "$title" --json title -q '.[].title')
             if [[ ! "$existing" =~ "$title" ]]; then
