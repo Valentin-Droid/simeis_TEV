@@ -37,3 +37,11 @@ add_custom_target(
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMENT "Cleaning build artifacts"
 )
+
+add_custom_target(
+    doc
+    COMMAND typst compile doc/manual.typ doc/manual.pdf
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Generating the PDF manual using Typst"
+)
+
