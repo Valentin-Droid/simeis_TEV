@@ -7,7 +7,7 @@ on:
 
 jobs:
   quality-check:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
       - name: 📥 Clone du dépôt
@@ -23,17 +23,17 @@ jobs:
           rustup component add rustfmt clippy
           cargo install cargo-audit
 
-      - name: ✅ Vérification version (rustfmt)
+      - name: Vérification version (rustfmt)
         run: |
           source $HOME/.cargo/env
           cargo fmt --version
 
-      - name: ✅ Vérification ash (rustfmt)
+      - name: Vérification hash (rustfmt)
         run: |
           source $HOME/.cargo/env
           shasum simeis-server/src/api.rs
 
-      - name: ✅ Vérification formatage (rustfmt)
+      - name: Vérification formatage (rustfmt)
         run: |
           source $HOME/.cargo/env
           cargo fmt --check
