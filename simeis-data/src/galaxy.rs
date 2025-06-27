@@ -14,7 +14,7 @@ type GalaxySector = (
     (SpaceUnit, SpaceUnit),
     (SpaceUnit, SpaceUnit),
 );
-//TODO: #32 test issue
+//TODO: #24 test issue
 const SECTOR_SIZE: (SpaceUnit, SpaceUnit, SpaceUnit) = (5000, 5000, 5000);
 const PLANETS_PER_SECTOR: usize = 3;
 const STATION_FPLANET_DIST: f64 = 500.0;

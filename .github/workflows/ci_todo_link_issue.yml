@@ -14,14 +14,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 🔍 Extract TODOs with issue references
+      - name: Extract TODOs with issue references
         id: extract_todos
         run: |
           git fetch origin main
           git diff origin/main...HEAD --unified=0 | grep '^+.*TODO: #' | grep -o 'TODO: #[0-9]\+' | sort | uniq > todos_with_issues.txt || true
           cat todos_with_issues.txt
 
-      - name: 🚨 Verify matching GitHub issues exist and are open
+      - name: Verify matching GitHub issues exist and are open
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
