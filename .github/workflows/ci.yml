@@ -44,6 +44,6 @@ jobs:
 
             - name: 📦 Install Typst and build manual
               run: |
-                  curl -sSf https://typst.app/install.sh | bash
-                  export PATH="$HOME/.typst/bin:$PATH"
+                  wget -qO- https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ
+                  export PATH="$PWD/typst-x86_64-unknown-linux-musl:$PATH"
                   typst compile doc/manual.typ doc/manual.pdf
