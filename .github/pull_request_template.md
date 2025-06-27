@@ -8,15 +8,15 @@
 
 <!-- Cochez les cases appropriées -->
 
--   [ ] 🐛 Bug fix (correction d'un problème)
--   [ ] ✨ Nouvelle fonctionnalité
--   [ ] 💥 Breaking change (modification qui casse la compatibilité)
--   [ ] 📚 Documentation
--   [ ] 🎨 Refactoring (amélioration du code sans changement de fonctionnalité)
--   [ ] ⚡ Performance
--   [ ] 🧪 Tests
--   [ ] 🔧 Configuration/Build
--   [ ] 🚀 CI/CD
+- [ ] 🐛 Bug fix (correction d'un problème)
+- [ ] ✨ Nouvelle fonctionnalité
+- [ ] 💥 Breaking change (modification qui casse la compatibilité)
+- [ ] 📚 Documentation
+- [ ] 🎨 Refactoring (amélioration du code sans changement de fonctionnalité)
+- [ ] ⚡ Performance
+- [ ] 🧪 Tests
+- [ ] 🔧 Configuration/Build
+- [ ] 🚀 CI/CD
 
 ## 🔗 Issue liée
 
@@ -28,17 +28,17 @@ Fixes #(numéro de l'issue)
 
 <!-- Listez les changements spécifiques apportés -->
 
--   Changement 1
--   Changement 2
--   Changement 3
+- Changement 1
+- Changement 2
+- Changement 3
 
 ## 🧪 Tests
 
 <!-- Décrivez comment les changements ont été testés -->
 
--   [ ] Les tests existants passent
--   [ ] De nouveaux tests ont été ajoutés
--   [ ] Tests manuels effectués
+- [ ] Les tests existants passent
+- [ ] De nouveaux tests ont été ajoutés
+- [ ] Tests manuels effectués
 
 ### Détails des tests
 
@@ -46,29 +46,29 @@ Fixes #(numéro de l'issue)
 
 ## 📚 Documentation
 
--   [ ] La documentation a été mise à jour
--   [ ] Les commentaires dans le code ont été ajoutés/mis à jour
--   [ ] Le README a été mis à jour si nécessaire
--   [ ] La documentation API a été mise à jour
+- [ ] La documentation a été mise à jour
+- [ ] Les commentaires dans le code ont été ajoutés/mis à jour
+- [ ] Le README a été mis à jour si nécessaire
+- [ ] La documentation API a été mise à jour
 
 ## ✅ Checklist avant merge
 
--   [ ] Mon code suit les conventions de style du projet
--   [ ] J'ai effectué une auto-review de mon code
--   [ ] J'ai commenté mon code dans les parties difficiles à comprendre
--   [ ] Mes changements ne génèrent pas de nouveaux warnings
--   [ ] J'ai ajouté des tests qui prouvent que ma correction fonctionne ou que ma fonctionnalité marche
--   [ ] Les tests unitaires existants et nouveaux passent en local
--   [ ] Les changements dépendants ont été mergés et publiés
+- [ ] Mon code suit les conventions de style du projet
+- [ ] J'ai effectué une auto-review de mon code
+- [ ] J'ai commenté mon code dans les parties difficiles à comprendre
+- [ ] Mes changements ne génèrent pas de nouveaux warnings
+- [ ] J'ai ajouté des tests qui prouvent que ma correction fonctionne ou que ma fonctionnalité marche
+- [ ] Les tests unitaires existants et nouveaux passent en local
+- [ ] Les changements dépendants ont été mergés et publiés
 
 ## 🚀 Déploiement
 
 <!-- Si applicable, décrivez les étapes de déploiement nécessaires -->
 
--   [ ] Aucune étape de déploiement spéciale requise
--   [ ] Migration de base de données nécessaire
--   [ ] Configuration d'environnement à modifier
--   [ ] Autre :
+- [ ] Aucune étape de déploiement spéciale requise
+- [ ] Migration de base de données nécessaire
+- [ ] Configuration d'environnement à modifier
+- [ ] Autre :
 
 ## 📸 Screenshots
 
