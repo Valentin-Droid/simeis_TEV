@@ -11,6 +11,7 @@ jobs:
             - name: Check PR source and target branches
               uses: actions/github-script@v7
               with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
                   script: |
                       const target = context.payload.pull_request.base.ref;
                       const source = context.payload.pull_request.head.ref;
