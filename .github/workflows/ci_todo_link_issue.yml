@@ -1,0 +1,52 @@
+name: Check TODOs linked to issues
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  check-todos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Extract new TODOs from PR diff
+        id: extract_todos
+        run: |
+          git fetch origin main
+          git diff origin/main...HEAD --unified=0 | grep '^+.*TODO' | sed 's/^+//g' > new_todos.txt || true
+
+      - name: Check each TODO has a matching GitHub issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          has_missing_issue=0
+
+          while IFS= read -r todo_line; do
+            if [[ -z "$todo_line" ]]; then
+              continue
+            fi
+
+            echo "🔎 Checking TODO: $todo_line"
+
+            # Search open issues for the TODO content
+            match=$(gh issue list --state open --search "$todo_line" --json title,body -q '.[].title')
+
+            if [[ -z "$match" ]]; then
+              echo "No matching issue found for TODO: $todo_line"
+              has_missing_issue=1
+            else
+              echo "Found issue for TODO: $todo_line"
+            fi
+          done < new_todos.txt
+
+          if [[ "$has_missing_issue" -eq 1 ]]; then
+            echo "Some TODOs have no matching GitHub issues."
+            exit 1
+          else
+            echo "All TODOs are linked to existing issues."
+          fi
