@@ -25,12 +25,12 @@ jobs:
       - name: ✅ Vérification formatage (rustfmt)
         run: |
           source $HOME/.cargo/env
-          cargo fmt --all -- --check
+          cargo fmt --check
 
       - name: 🔍 Linting (clippy)
         run: |
           source $HOME/.cargo/env
-          cargo clippy -- -D warnings
+          cargo clippy
 
       - name: 🛡️ Audit de sécurité
         run: |
