@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
       - name: 📥 Clone du dépôt
+      - uses: actions/checkout@v4
         # run: |
         #   git clone ${{ github.server_url }}/${{ github.repository }} .
         #   git fetch --all
