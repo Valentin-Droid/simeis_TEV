@@ -1,52 +1,52 @@
 name: ci
 
 on:
-  push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+    push:
+        branches: ['main']
+    pull_request:
+        branches: ['main']
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
+    build-and-test:
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: 📥 Checkout repository
-        run: |
-          git clone ${{ github.server_url }}/${{ github.repository }} .
-          git fetch --all
+        steps:
+            - name: 📥 Checkout repository
+              run: |
+                  git clone ${{ github.server_url }}/${{ github.repository }} .
+                  git fetch --all
 
-      - name: 🔧 Install Rust
-        run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+            - name: 🔧 Install Rust
+              run: |
+                  curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+                  echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - name: ⚙️ Build (release)
-        run: |
-          source $HOME/.cargo/env
-          cargo build --release
+            - name: ⚙️ Build (release)
+              run: |
+                  source $HOME/.cargo/env
+                  cargo build --release
 
-      - name: ✅ Test
-        run: |
-          source $HOME/.cargo/env
-          cargo test
+            - name: ✅ Test
+              run: |
+                  source $HOME/.cargo/env
+                  cargo test
 
-  doc:
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    needs: build-and-test
+    doc:
+        if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && github.base_ref == 'main'
+        runs-on: ubuntu-latest
+        needs: build-and-test
 
-    steps:
-      - name: 📥 Checkout repository
-        run: |
-          git clone ${{ github.server_url }}/${{ github.repository }} .
-          git fetch --all
+        steps:
+            - name: 📥 Checkout repository
+              run: |
+                  git clone ${{ github.server_url }}/${{ github.repository }} .
+                  git fetch --all
 
-      - name: 📦 Install Typst
-        run: |
-          curl -sSf https://typst.app/install.sh | bash
-          echo "$HOME/.typst" >> $GITHUB_PATH
+            - name: 📦 Install Typst
+              run: |
+                  curl -sSf https://typst.app/install.sh | bash
+                  echo "$HOME/.typst" >> $GITHUB_PATH
 
-      - name: 📝 Build manual
-        run: |
-          ~/.typst/typst compile doc/manual.typ doc/manual.pdf
+            - name: 📝 Build manual
+              run: |
+                  ~/.typst/typst compile doc/manual.typ doc/manual.pdf
