@@ -42,15 +42,8 @@ jobs:
                   git clone ${{ github.server_url }}/${{ github.repository }} .
                   git fetch --all
 
-            - name: 📦 Install Typst
+            - name: 📦 Install Typst and build manual
               run: |
                   curl -sSf https://typst.app/install.sh | bash
-
-            - name: Add Typst to PATH
-              run: |
-                  echo "$HOME/.typst/bin" >> $GITHUB_PATH
-
-            - name: 📝 Build manual
-              run: |
                   export PATH="$HOME/.typst/bin:$PATH"
                   typst compile doc/manual.typ doc/manual.pdf
