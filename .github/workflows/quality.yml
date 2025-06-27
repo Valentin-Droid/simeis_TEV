@@ -12,8 +12,8 @@ jobs:
     steps:
       - name: 📥 Clone du dépôt
         run: |
-          git clone https://github.com/${{ github.repository }} .
-          git checkout ${{ github.sha }}
+          git clone ${{ github.server_url }}/${{ github.repository }} .
+          git fetch --all
 
       - name: 🛠️ Installer Rust
         run: |
