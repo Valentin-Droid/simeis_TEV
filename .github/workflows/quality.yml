@@ -17,7 +17,7 @@ jobs:
 
       - name: 🛠️ Installer Rust
         run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85.0
           source $HOME/.cargo/env
           rustup component add rustfmt clippy
           cargo install cargo-audit
