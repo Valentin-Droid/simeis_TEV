@@ -370,3 +370,9 @@ fn test_compute_sector() {
 fn test_heavy_testing() {
     assert!(false);
 }
+
+#[cfg(feature = "heavy_testing")]
+#[test]
+fn test_heavy_testing() {
+    assert!(false);
+}
