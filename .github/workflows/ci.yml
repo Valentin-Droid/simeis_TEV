@@ -49,4 +49,4 @@ jobs:
 
             - name: 📝 Build manual
               run: |
-                  ~/.typst/bin/typst compile doc/manual.typ doc/manual.pdf
+                  typst compile doc/manual.typ doc/manual.pdf
