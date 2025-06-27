@@ -1,4 +1,4 @@
-name: Check TODOs linked to issues
+name: Check TODOs have matching open issues
 
 on:
   pull_request:
@@ -14,39 +14,34 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract new TODOs from PR diff
+      - name: 🔍 Extract TODOs with issue references
         id: extract_todos
         run: |
           git fetch origin main
-          git diff origin/main...HEAD --unified=0 | grep '^+.*TODO' | sed 's/^+//g' > new_todos.txt || true
+          git diff origin/main...HEAD --unified=0 | grep '^+.*TODO: #' | grep -o 'TODO: #[0-9]\+' | sort | uniq > todos_with_issues.txt || true
+          cat todos_with_issues.txt
 
-      - name: Check each TODO has a matching GitHub issue
+      - name: 🚨 Verify matching GitHub issues exist and are open
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          has_missing_issue=0
+          failed=0
 
-          while IFS= read -r todo_line; do
-            if [[ -z "$todo_line" ]]; then
-              continue
-            fi
+          while read -r todo; do
+            issue_number=$(echo "$todo" | grep -o '[0-9]\+')
+            echo "Checking issue #$issue_number..."
 
-            echo "🔎 Checking TODO: $todo_line"
-
-            # Search open issues for the TODO content
-            match=$(gh issue list --state open --search "$todo_line" --json title,body -q '.[].title')
-
-            if [[ -z "$match" ]]; then
-              echo "No matching issue found for TODO: $todo_line"
-              has_missing_issue=1
+            if gh issue view "$issue_number" --json state -q '.state' | grep -q 'OPEN'; then
+              echo "Issue #$issue_number is open."
             else
-              echo "Found issue for TODO: $todo_line"
+              echo "Issue #$issue_number is missing or closed!"
+              failed=1
             fi
-          done < new_todos.txt
+          done < todos_with_issues.txt
 
-          if [[ "$has_missing_issue" -eq 1 ]]; then
-            echo "Some TODOs have no matching GitHub issues."
+          if [ "$failed" -eq 1 ]; then
+            echo "Some TODOs reference missing or closed issues. Please fix them."
             exit 1
           else
-            echo "All TODOs are linked to existing issues."
+            echo "All referenced issues are open."
           fi
