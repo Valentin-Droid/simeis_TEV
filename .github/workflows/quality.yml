@@ -1,0 +1,38 @@
+name: Rust Code Quality
+
+on:
+  pull_request:
+    branches: "**"
+  workflow_dispatch:
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Clone du dépôt
+        run: |
+          git clone https://github.com/${{ github.repository }} .
+          git checkout ${{ github.sha }}
+
+      - name: 🛠️ Installer Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+          source $HOME/.cargo/env
+          rustup component add rustfmt clippy
+          cargo install cargo-audit
+
+      - name: ✅ Vérification formatage (rustfmt)
+        run: |
+          source $HOME/.cargo/env
+          cargo fmt --all -- --check
+
+      - name: 🔍 Linting (clippy)
+        run: |
+          source $HOME/.cargo/env
+          cargo clippy -- -D warnings
+
+      - name: 🛡️ Audit de sécurité
+        run: |
+          source $HOME/.cargo/env
+          cargo audit
