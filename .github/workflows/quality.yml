@@ -10,10 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4
       - name: 📥 Clone du dépôt
-        run: |
-          git clone ${{ github.server_url }}/${{ github.repository }} .
-          git fetch --all
+        # run: |
+        #   git clone ${{ github.server_url }}/${{ github.repository }} .
+        #   git fetch --all
 
       - name: 🛠️ Installer Rust
         run: |
