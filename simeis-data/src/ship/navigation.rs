@@ -104,7 +104,7 @@ fn test_compute_cost_addition() {
             assert!(c2.fuel_consumption - ((x as f64) * c1.fuel_consumption) < EPS, "Wrong {x}x consumption");
             assert!(c2.hull_usage - ((x as f64) * c1.hull_usage) < EPS, "Wrong {x}x hull usage");
         }
-        println!("");
+        println!();
     }
 
     let mut ship = Ship::random((0, 0, 0));

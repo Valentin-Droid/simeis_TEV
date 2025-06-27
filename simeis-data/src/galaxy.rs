@@ -137,7 +137,7 @@ impl Galaxy {
         let ind = galaxy.generate_sector(&seccoord);
         let sector = galaxy.discovered.get(ind).unwrap();
 
-        let Some(SpaceObject::Planet(pla)) = galaxy.list_objects_in_sector(&sector)
+        let Some(SpaceObject::Planet(pla)) = galaxy.list_objects_in_sector(sector)
             .iter()
             .filter(|obj| matches!(obj, SpaceObject::Planet(_)))
             .nth(0)
@@ -149,12 +149,12 @@ impl Galaxy {
         let mut retry_n = 0;
         loop {
             coord = get_rand_coord_near(&pla.position, STATION_FPLANET_DIST, &mut rng);
-            while !is_in_sector(&coord, &sector) || galaxy.get(&coord).is_some() {
+            while !is_in_sector(&coord, sector) || galaxy.get(&coord).is_some() {
                 coord = get_rand_coord_near(&pla.position, STATION_FPLANET_DIST, &mut rng);
             }
 
             let mut mindist = None;
-            for pla in galaxy.list_objects_in_sector(&sector)
+            for pla in galaxy.list_objects_in_sector(sector)
                 .iter()
                 .filter_map(|obj| if let SpaceObject::Planet(p) = obj { Some(p) } else { None }) {
                 let dist = get_distance(&pla.position, &coord);
@@ -180,7 +180,7 @@ impl Galaxy {
         let station = Arc::new(RwLock::new(station::Station::init(id, coord)));
         galaxy.insert(&coord, SpaceObject::BaseStation(station)).unwrap();
         drop(galaxy);
-        return (id, coord);
+        (id, coord)
     }
 
     pub async fn get_station(&self, coord: &SpaceCoord) -> Option<Arc<RwLock<station::Station>>> {
@@ -211,7 +211,7 @@ impl Galaxy {
                 results.add(rank, obj).await;
             }
         }
-        debug_assert!(results.planets.len() > 0);    // We should always have some planets
+        debug_assert!(!results.planets.is_empty());    // We should always have some planets
         results
     }
 }
