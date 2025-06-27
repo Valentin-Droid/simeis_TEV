@@ -23,14 +23,14 @@ jobs:
           cargo install cargo-audit
 
       - name: ✅ Vérification version (rustfmt)
-              run: |
-                source $HOME/.cargo/env
-                cargo fmt --version
-      
+        run: |
+          source $HOME/.cargo/env
+          cargo fmt --version
+
       - name: ✅ Vérification ash (rustfmt)
-              run: |
-                source $HOME/.cargo/env
-                shasum simeis-server/src/api.rs
+        run: |
+          source $HOME/.cargo/env
+          shasum simeis-server/src/api.rs
 
       - name: ✅ Vérification formatage (rustfmt)
         run: |
