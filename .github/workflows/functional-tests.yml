@@ -1,0 +1,31 @@
+name: Functional Heavy Tests
+
+on:
+    workflow_dispatch:
+    release:
+        types: [published]
+
+jobs:
+    functional-tests:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v3
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: '3.11'
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+
+            - name: Build and start simeis-server
+              run: |
+                  cargo build --release --manifest-path simeis-server/Cargo.toml
+                  nohup ./target/release/simeis-server &
+                  sleep 10
+
+            - name: Run functional tests
+              run: |
+                  python -m unittest discover -s example -p 'test_*.py'
