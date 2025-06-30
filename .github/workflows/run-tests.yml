@@ -3,10 +3,10 @@ name: Run All Tests on Release Branches
 on:
   push:
     branches:
-      - "release*"
+      - ["release/**"]
   pull_request:
     branches:
-      - "release*"
+      - ["release/**"]
 
 jobs:
   tests:
