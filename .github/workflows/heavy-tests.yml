@@ -1,18 +1,29 @@
-name: ci
+name: heavy-tests
 
 on:
+    # Trigger manually
+    workflow_dispatch:
+        inputs:
+            duration:
+                description: 'Test duration in seconds'
+                required: false
+                default: '3600'
+                type: string
+    
+    schedule:
+        - cron: '0 2 * * 0' 
+
     push:
-        branches: ['main']
-    pull_request:
         branches: ['main']
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    group: ${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: true
 
 jobs:
-    build-and-test:
+    heavy-property-tests:
         runs-on: ubuntu-latest
+        timeout-minutes: 90  
 
         steps:
             - name: 📥 Checkout repository
@@ -30,11 +41,6 @@ jobs:
                   source $HOME/.cargo/env
                   cargo build --release
 
-            - name: ✅ Test
-              run: |
-                  source $HOME/.cargo/env
-                  cargo test
-
             - name: 🐍 Setup Python
               uses: actions/setup-python@v4
               with:
@@ -49,24 +55,8 @@ jobs:
                   # Test if server is running
                   curl -f http://127.0.0.1:8080/ping || (echo "Server failed to start" && exit 1)
 
-            - name: 🧪 Run Property-Based Tests (Fast)
+            - name: 🧪 Run Heavy Property-Based Tests
               run: |
                   cd tests
-                  python propertybased.py --duration 30
-
-    doc:
-        if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && github.base_ref == 'main'
-        runs-on: ubuntu-latest
-        needs: build-and-test
-
-        steps:
-            - name: 📥 Checkout repository
-              run: |
-                  git clone ${{ github.server_url }}/${{ github.repository }} .
-                  git fetch --all
-
-            - name: 📦 Install Typst and build manual
-              run: |
-                  wget -qO- https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ
-                  export PATH="$PWD/typst-x86_64-unknown-linux-musl:$PATH"
-                  typst compile doc/manual.typ doc/manual.pdf
+                  duration=${{ github.event.inputs.duration || '3600' }}
+                  python propertybased.py --duration $duration
