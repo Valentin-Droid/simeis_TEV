@@ -1,0 +1,61 @@
+name: Run All Tests on Release Branches
+
+on:
+  push:
+    branches:
+      - "release*"
+  pull_request:
+    branches:
+      - "release*"
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Clone le dépôt
+        run: git clone ${{ github.event.repository.clone_url }} .
+
+      - name: ⚙️ Installer Rust manuellement
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          source $HOME/.cargo/env
+          rustc --version
+
+      - name: 🐍 Installer Python manuellement
+        run: |
+          sudo apt update
+          sudo apt install -y python3 python3-pip
+          python3 -m pip install --upgrade pip
+          pip3 install requests
+
+      - name: 🚀 Lancer le serveur Simeis
+        run: |
+          cd backend
+          nohup $HOME/.cargo/bin/cargo run > server.log 2>&1 &
+          cd ..
+
+      - name: 🕓 Attendre que l’API soit prête
+        run: |
+          for i in {1..20}; do
+            if curl -s http://localhost:8080/player/new/test > /dev/null; then
+              echo "✅ Serveur prêt"
+              break
+            fi
+            echo "⏳ Attente du backend (tentative $i)..."
+            sleep 2
+          done
+
+      - name: 🧪 Exécuter les tests unitaires Python
+        run: |
+          python3 -m unittest discover -s example -p 'test_*.py'
+
+      - name: 🔬 Exécuter les tests fonctionnels Python
+        run: |
+          for file in test_*.py tests/test_*.py; do
+            if [ -f "$file" ]; then
+              echo "▶️ Lancement de $file"
+              python3 "$file"
+            fi
+          done
