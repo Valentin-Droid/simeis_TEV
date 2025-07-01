@@ -46,7 +46,7 @@ jobs:
     
     - name: Upload test results on failure
       if: failure()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: property-test-failure-${{ github.sha }}
         path: tests/propertybased.py
