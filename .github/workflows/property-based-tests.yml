@@ -47,11 +47,16 @@ jobs:
       test-result: ${{ steps.property-test.outcome }}
     
     steps:
-        - name: Checkout repository
+        - name: Checkout repository manually
           run: |
-            git clone ${{ github.server_url }}/${{ github.repository }} .
-            git fetch --all
+            git init
+            git remote add origin ${{ github.server_url }}/${{ github.repository }}
+            git fetch --depth=1 origin ${{ github.sha }}
+            git checkout FETCH_HEAD
 
+        - name: Debug repo content
+          run: ls -R
+          
         - name: Set up Python 3.12
           run: |
             sudo apt-get update
@@ -89,16 +94,3 @@ jobs:
             name: property-test-failure-${{ github.sha }}
             path: tests/propertybased.py
 
-  # Job de déploiement (seulement si les property tests passent)
-  deploy:
-    needs: property-tests
-    runs-on: ubuntu-latest
-    if: success() && github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to production
-      run: |
-        echo "Deploying to production..."
-        # Ici vos commandes de déploiement
