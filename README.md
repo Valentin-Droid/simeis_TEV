@@ -20,48 +20,48 @@ cargo test --all-features --workspace
 
 ## 📁 Structure du projet
 
--   `simeis-data/` - Couche de données (structures de jeu, logique métier)
--   `simeis-server/` - Serveur et API
--   `example/` - Exemples d'utilisation et clients
--   `doc/` - Documentation du projet
+- `simeis-data/` - Couche de données (structures de jeu, logique métier)
+- `simeis-server/` - Serveur et API
+- `example/` - Exemples d'utilisation et clients
+- `doc/` - Documentation du projet
 
 ## 🔧 Développement
 
 ### Prérequis
 
--   Rust 1.70+
--   Cargo
+- Rust 1.70+
+- Cargo
 
 ### Workflow de développement
 
 1. **Créer une branche feature**
 
-    ```bash
-    git checkout -b feature/ma-nouvelle-fonctionnalite
-    ```
+   ```bash
+   git checkout -b feature/ma-nouvelle-fonctionnalite
+   ```
 
 2. **Développer et tester**
 
-    ```bash
-    cargo test
-    cargo fmt
-    cargo clippy
-    ```
+   ```bash
+   cargo test
+   cargo fmt
+   cargo clippy
+   ```
 
 3. **Créer une Pull Request**
-    - Le template PR vous guidera
-    - Les reviewers sont assignés automatiquement
-    - La CI vérifie automatiquement votre code
+   - Le template PR vous guidera
+   - Les reviewers sont assignés automatiquement
+   - La CI vérifie automatiquement votre code
 
 ### CI/CD
 
 Le projet utilise GitHub Actions pour :
 
--   ✅ Tests automatiques
--   ✅ Vérifications de format (rustfmt)
--   ✅ Linting (clippy)
--   ✅ Build en mode release
--   ✅ Audit de sécurité
+- ✅ Tests automatiques
+- ✅ Vérifications de format (rustfmt)
+- ✅ Linting (clippy)
+- ✅ Build en mode release
+- ✅ Audit de sécurité
 
 ## 📋 Contribution
 
@@ -72,4 +72,6 @@ Le projet utilise GitHub Actions pour :
 
 ## 📚 Documentation
 
--   [Manuel utilisateur](doc/manual.pdf)
+- [Manuel utilisateur](doc/manual.pdf)
+
+- Test build matrix
