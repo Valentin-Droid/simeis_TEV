@@ -14,11 +14,11 @@ jobs:
                   git clone ${{ github.server_url }}/${{ github.repository }} .
                   git fetch --all
 
-            - name: Set up Python 3.11
+            - name: Set up Python 3.12
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y python3.11 python3.11-venv python3.11-distutils
-                  python3.11 -m pip install --upgrade pip
+                  sudo apt-get install -y python3.12 python3.12-venv python3.12-distutils
+                  python3.12 -m pip install --upgrade pip
 
             - name: Build and start simeis-server
               run: |
@@ -28,4 +28,4 @@ jobs:
 
             - name: Run functional tests
               run: |
-                  python3.11 -m unittest discover -s example -p 'test_*.py'
+                  python3.12 -m unittest discover -s example -p 'test_*.py'
