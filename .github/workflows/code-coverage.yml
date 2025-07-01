@@ -1,0 +1,38 @@
+name: Code Coverage
+
+on:
+    pull_request:
+        branches: [main, develop]
+
+jobs:
+    code-coverage:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Install Rust
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: 1.85.0
+                  override: true
+
+            - name: Install cargo-tarpaulin
+              run: cargo install cargo-tarpaulin
+
+            - name: Run code coverage
+              run: cargo tarpaulin --out Xml --workspace --all-features --timeout 120
+
+            - name: Parse coverage percentage
+              id: coverage
+              run: |
+                  percent=$(grep -oP 'line-rate="\K[0-9.]+(?=")' cobertura.xml | head -1)
+                  percent=$(echo "$percent * 100" | bc -l | awk '{printf("%.2f", $0)}')
+                  echo "coverage=$percent" >> $GITHUB_OUTPUT
+
+            - name: Add label if coverage < 50%
+              if: ${{ steps.coverage.outputs.coverage < 50 }}
+              uses: actions-ecosystem/action-add-labels@v1
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  labels: not enough tests
