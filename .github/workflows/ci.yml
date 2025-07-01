@@ -1,49 +1,58 @@
 name: ci
 
 on:
-    push:
-        branches: ['main']
-    pull_request:
-        branches: ['main']
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
-    build-and-test:
-        runs-on: ubuntu-latest
+  build-and-test:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: 📥 Checkout repository
-              run: |
-                  git clone ${{ github.server_url }}/${{ github.repository }} .
-                  git fetch --all
+    steps:
+      - name: 📥 Checkout repository
+        run: |
+          git clone ${{ github.server_url }}/${{ github.repository }} .
+          git fetch --all
 
-            - name: 🔧 Install Rust
-              run: |
-                  curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85.0
-                  echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+      - name: Restore Rust cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
 
-            - name: ⚙️ Build (release)
-              run: |
-                  source $HOME/.cargo/env
-                  cargo build --release
+      - name: 🔧 Install Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85.0
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-            - name: ✅ Test
-              run: |
-                  source $HOME/.cargo/env
-                  cargo test
+      - name: ⚙️ Build (release)
+        run: |
+          source $HOME/.cargo/env
+          cargo build --release
 
-    doc:
-        if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && github.base_ref == 'main'
-        runs-on: ubuntu-latest
-        needs: build-and-test
+      - name: ✅ Test
+        run: |
+          source $HOME/.cargo/env
+          cargo test
 
-        steps:
-            - name: 📥 Checkout repository
-              run: |
-                  git clone ${{ github.server_url }}/${{ github.repository }} .
-                  git fetch --all
+  doc:
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    needs: build-and-test
 
-            - name: 📦 Install Typst and build manual
-              run: |
-                  wget -qO- https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ
-                  export PATH="$PWD/typst-x86_64-unknown-linux-musl:$PATH"
-                  typst compile doc/manual.typ doc/manual.pdf
+    steps:
+      - name: 📥 Checkout repository
+        run: |
+          git clone ${{ github.server_url }}/${{ github.repository }} .
+          git fetch --all
+
+      - name: 📦 Install Typst and build manual
+        run: |
+          wget -qO- https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ
+          export PATH="$PWD/typst-x86_64-unknown-linux-musl:$PATH"
+          typst compile doc/manual.typ doc/manual.pdf
