@@ -23,8 +23,15 @@ jobs:
             - name: Build and start simeis-server
               run: |
                   cargo build --release --manifest-path simeis-server/Cargo.toml
-                  nohup ./target/release/simeis-server &
-                  sleep 10
+                  nohup ./target/release/simeis-server > server.log 2>&1 &
+                  for i in {1..30}; do
+                    if curl -s http://localhost:8000/ping | grep -q 'pong'; then
+                      echo "Server is up!"
+                      break
+                    fi
+                    echo "Waiting for server..."
+                    sleep 1
+                  done
 
             - name: Run functional tests
               run: |
