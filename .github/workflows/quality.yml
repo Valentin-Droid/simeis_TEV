@@ -1,57 +1,57 @@
 name: Rust Code Quality
 
 on:
-    pull_request:
-        branches: ['**']
-    workflow_dispatch:
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
 
 jobs:
-    quality-check:
-        runs-on: macos-latest
+  quality-check:
+    runs-on: macos-latest
 
-        steps:
-            - name: 📥 Clone du dépôt
-              run: |
-                  git clone ${{ github.server_url }}/${{ github.repository }} .
-                  git fetch --all
+    steps:
+      - name: 📥 Clone du dépôt
+        run: |
+          git clone ${{ github.server_url }}/${{ github.repository }} .
+          git fetch --all
 
-            - name: Restore Rust cache
-                uses: actions/cache@v4
-                with:
-                  path: |
-                    ~/.cargo/registry
-                    ~/.cargo/git
-                    target
-                  key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
+      - name: Restore Rust cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
 
-            - name: 🛠️ Installer Rust
-              run: |
-                  curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.87.0
-                  source $HOME/.cargo/env
-                  rustup component add rustfmt clippy
-                  cargo install cargo-audit
+      - name: 🛠️ Installer Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.87.0
+          source $HOME/.cargo/env
+          rustup component add rustfmt clippy
+          cargo install cargo-audit
 
-            - name: Vérification version (rustfmt)
-              run: |
-                  source $HOME/.cargo/env
-                  cargo fmt --version
+      - name: Vérification version (rustfmt)
+        run: |
+          source $HOME/.cargo/env
+          cargo fmt --version
 
-            - name: Vérification hash (rustfmt)
-              run: |
-                  source $HOME/.cargo/env
-                  shasum simeis-server/src/api.rs
+      - name: Vérification hash (rustfmt)
+        run: |
+          source $HOME/.cargo/env
+          shasum simeis-server/src/api.rs
 
-            - name: Vérification formatage (rustfmt)
-              run: |
-                  source $HOME/.cargo/env
-                  cargo fmt --check
+      - name: Vérification formatage (rustfmt)
+        run: |
+          source $HOME/.cargo/env
+          cargo fmt --check
 
-            - name: 🔍 Linting (clippy)
-              run: |
-                  source $HOME/.cargo/env
-                  cargo clippy
+      - name: 🔍 Linting (clippy)
+        run: |
+          source $HOME/.cargo/env
+          cargo clippy
 
-            - name: 🛡️ Audit de sécurité
-              run: |
-                  source $HOME/.cargo/env
-                  cargo audit
+      - name: 🛡️ Audit de sécurité
+        run: |
+          source $HOME/.cargo/env
+          cargo audit

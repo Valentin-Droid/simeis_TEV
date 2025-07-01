@@ -1,50 +1,50 @@
 name: Code Coverage
 
 on:
-    pull_request:
-        branches:
-            - main
-            - develop
+  pull_request:
+    branches:
+      - main
+      - develop
 
 jobs:
-    code-coverage:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              run: |
-                  git clone ${{ github.server_url }}/${{ github.repository }} .
-                  git fetch --all
-            
-            - name: Restore Rust cache
-                uses: actions/cache@v4
-                with:
-                  path: |
-                    ~/.cargo/registry
-                    ~/.cargo/git
-                    target
-                  key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
+  code-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        run: |
+          git clone ${{ github.server_url }}/${{ github.repository }} .
+          git fetch --all
 
-            - name: Install Rust
-              run: |
-                  curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85.0
-                  source $HOME/.cargo/env
-                  rustup component add rustfmt clippy
+      - name: Restore Rust cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
 
-            - name: Install cargo-tarpaulin
-              run: cargo install cargo-tarpaulin
+      - name: Install Rust
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85.0
+          source $HOME/.cargo/env
+          rustup component add rustfmt clippy
 
-            - name: Run code coverage
-              run: cargo tarpaulin --out Xml --workspace --all-features --timeout 120
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
 
-            - name: Parse coverage percentage
-              id: coverage
-              run: |
-                  percent=$(grep -oP 'line-rate="\K[0-9.]+(?=")' cobertura.xml | head -1)
-                  percent=$(echo "$percent * 100" | bc -l | awk '{printf("%.2f", $0)}')
-                  echo "coverage=$percent" >> $GITHUB_OUTPUT
+      - name: Run code coverage
+        run: cargo tarpaulin --out Xml --workspace --all-features --timeout 120
 
-            - name: Warn if coverage < 50%
-              run: |
-                  if (( $(echo "$coverage < 50" | bc -l) )); then
-                    echo "::warning::Not enough tests (coverage < 50%)"
-                  fi
+      - name: Parse coverage percentage
+        id: coverage
+        run: |
+          percent=$(grep -oP 'line-rate="\K[0-9.]+(?=")' cobertura.xml | head -1)
+          percent=$(echo "$percent * 100" | bc -l | awk '{printf("%.2f", $0)}')
+          echo "coverage=$percent" >> $GITHUB_OUTPUT
+
+      - name: Warn if coverage < 50%
+        run: |
+          if (( $(echo "$coverage < 50" | bc -l) )); then
+            echo "::warning::Not enough tests (coverage < 50%)"
+          fi
