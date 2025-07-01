@@ -5,94 +5,93 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+  workflow_run:
+    workflows: ["ci", "Functional Heavy Tests"]
+    types:
+      - completed
+    branches: [ main, develop ]
 
 jobs:
-  property-tests:
+  # Job de vérification des prérequis
+  check-prerequisites:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' ||
+      github.event_name == 'push' ||
+      github.event_name == 'pull_request'
+    outputs:
+      should-run: ${{ steps.check.outputs.should-run }}
+    
+    steps:
+    - name: Check if prerequisites passed
+      id: check
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+          if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            echo "✅ Prerequisites passed, running property tests"
+          else
+            echo "should-run=false" >> $GITHUB_OUTPUT
+            echo "❌ Prerequisites failed, skipping property tests"
+          fi
+        else
+          echo "should-run=true" >> $GITHUB_OUTPUT
+          echo "🔄 Direct trigger, running property tests"
+        fi
+
+  property-tests:
+    needs: check-prerequisites
+    runs-on: ubuntu-latest
+    if: needs.check-prerequisites.outputs.should-run == 'true'
     outputs:
       test-result: ${{ steps.property-test.outcome }}
     
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Determine test duration
-      id: test-config
-      run: |
-        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-          echo "duration=120" >> $GITHUB_OUTPUT
-          echo "branch-type=main" >> $GITHUB_OUTPUT
-        elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-          echo "duration=60" >> $GITHUB_OUTPUT
-          echo "branch-type=develop" >> $GITHUB_OUTPUT
-        else
-          echo "duration=5" >> $GITHUB_OUTPUT
-          echo "branch-type=pr" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Run Property-Based Tests
-      id: property-test
-      env:
-        PROPERTY_TEST_DURATION: ${{ steps.test-config.outputs.duration }}
-      run: |
-        cd tests
-        echo "Running property-based tests for ${{ steps.test-config.outputs.duration }} seconds on ${{ steps.test-config.outputs.branch-type }}"
-        python propertybased.py
-      continue-on-error: false
-    
-    - name: Upload test results on failure
-      if: failure()
-      uses: actions/upload-artifact@v4
-      with:
-        name: property-test-failure-${{ github.sha }}
-        path: tests/propertybased.py
+        - name: Checkout repository
+          run: |
+            git clone ${{ github.repositoryUrl }} .
+            git checkout ${{ github.ref }}
 
-  # Job qui dépend du succès des tests property-based
-  build-and-test:
-    needs: property-tests
-    runs-on: ubuntu-latest
-    if: success()
+        - name: Set up Python 3.11
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y python3.11 python3.11-venv python3.11-distutils
+            python3.11 -m pip install --upgrade pip
     
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
+        - name: Determine test duration
+          id: test-config
+          run: |
+            if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "duration=120" >> $GITHUB_OUTPUT
+            echo "branch-type=main" >> $GITHUB_OUTPUT
+            elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "duration=60" >> $GITHUB_OUTPUT
+            echo "branch-type=develop" >> $GITHUB_OUTPUT
+            else
+            echo "duration=5" >> $GITHUB_OUTPUT
+            echo "branch-type=pr" >> $GITHUB_OUTPUT
+            fi
         
-    - name: Build Rust project
-      run: cargo build --verbose
-      
-    - name: Run Rust tests
-      run: cargo test --verbose
+        - name: Run Property-Based Tests
+          id: property-test
+          env:
+            PROPERTY_TEST_DURATION: ${{ steps.test-config.outputs.duration }}
+          run: |
+            cd tests
+            echo "Running property-based tests for ${{ steps.test-config.outputs.duration }} seconds on ${{ steps.test-config.outputs.branch-type }}"
+            python propertybased.py
+          continue-on-error: false
+        
+        - name: Upload test results on failure
+          if: failure()
+          uses: actions/upload-artifact@v4
+          with:
+            name: property-test-failure-${{ github.sha }}
+            path: tests/propertybased.py
 
-  # Job pour les autres tests (dépend aussi du succès des property-based tests)
-  integration-tests:
-    needs: property-tests
-    runs-on: ubuntu-latest
-    if: success()
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-        
-    - name: Run integration tests
-      run: |
-        cd example
-        python -m pytest test_*.py -v
-        
-  # Job de déploiement (seulement si tous les tests passent)
+  # Job de déploiement (seulement si les property tests passent)
   deploy:
-    needs: [property-tests, build-and-test, integration-tests]
+    needs: property-tests
     runs-on: ubuntu-latest
     if: success() && github.ref == 'refs/heads/main'
     
