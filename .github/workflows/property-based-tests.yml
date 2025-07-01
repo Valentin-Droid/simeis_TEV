@@ -1,0 +1,96 @@
+name: Property-Based Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_run:
+    workflows: ["ci", "Functional Heavy Tests"]
+    types:
+      - completed
+    branches: [ main, develop ]
+
+jobs:
+  # Job de vérification des prérequis
+  check-prerequisites:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' ||
+      github.event_name == 'push' ||
+      github.event_name == 'pull_request'
+    outputs:
+      should-run: ${{ steps.check.outputs.should-run }}
+    
+    steps:
+    - name: Check if prerequisites passed
+      id: check
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+          if [[ "${{ github.event.workflow_run.conclusion }}" == "success" ]]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            echo "✅ Prerequisites passed, running property tests"
+          else
+            echo "should-run=false" >> $GITHUB_OUTPUT
+            echo "❌ Prerequisites failed, skipping property tests"
+          fi
+        else
+          echo "should-run=true" >> $GITHUB_OUTPUT
+          echo "🔄 Direct trigger, running property tests"
+        fi
+
+  property-tests:
+    needs: check-prerequisites
+    runs-on: ubuntu-latest
+    if: needs.check-prerequisites.outputs.should-run == 'true'
+    outputs:
+      test-result: ${{ steps.property-test.outcome }}
+    
+    steps:
+        - name: Checkout repository manually
+          run: |
+            git init
+            git remote add origin ${{ github.server_url }}/${{ github.repository }}
+            git fetch --depth=1 origin ${{ github.sha }}
+            git checkout FETCH_HEAD
+
+        - name: Debug repo content
+          run: ls -R
+          
+        - name: Set up Python 3.12
+          run: |
+            sudo apt-get update
+            sudo apt-get install -y python3.12 python3.12-venv
+            python3.12 -m pip install --upgrade pip
+    
+        - name: Determine test duration
+          id: test-config
+          run: |
+            if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "duration=120" >> $GITHUB_OUTPUT
+            echo "branch-type=main" >> $GITHUB_OUTPUT
+            elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
+            echo "duration=60" >> $GITHUB_OUTPUT
+            echo "branch-type=develop" >> $GITHUB_OUTPUT
+            else
+            echo "duration=5" >> $GITHUB_OUTPUT
+            echo "branch-type=pr" >> $GITHUB_OUTPUT
+            fi
+        
+        - name: Run Property-Based Tests
+          id: property-test
+          env:
+            PROPERTY_TEST_DURATION: ${{ steps.test-config.outputs.duration }}
+          run: |
+            cd tests
+            echo "Running property-based tests for ${{ steps.test-config.outputs.duration }} seconds on ${{ steps.test-config.outputs.branch-type }}"
+            python propertybased.py
+          continue-on-error: false
+        
+        - name: Upload test results on failure
+          if: failure()
+          uses: actions/upload-artifact@v4
+          with:
+            name: property-test-failure-${{ github.sha }}
+            path: tests/propertybased.py
+
