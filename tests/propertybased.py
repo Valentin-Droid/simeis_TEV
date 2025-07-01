@@ -8,10 +8,14 @@ sys.path.insert(0, example_path)
 
 from watch_game import mkbar, WIDTH, SCORE, POTENTIAL, VOID
 
-TEST_DURATION_SECONDS = 5
+# Configuration de la durée selon l'environnement CI
+DEFAULT_DURATION = 5
+TEST_DURATION_SECONDS = int(os.environ.get('PROPERTY_TEST_DURATION', DEFAULT_DURATION))
+
+print(f"🔄 Running property-based tests for {TEST_DURATION_SECONDS} seconds...")
 
 def create_property_based_test(f):
-    regressions = []  # Seeds qui ont déjà échoué
+    regressions = []  
     start_time = time.time()
     iteration = 0
     
@@ -29,7 +33,7 @@ def create_property_based_test(f):
             sys.exit(1)
         iteration += 1
     
-    print(f"Tests completed successfully after {iteration} iterations in {TEST_DURATION_SECONDS} seconds")
+    print(f"✅ Tests completed successfully after {iteration} iterations in {TEST_DURATION_SECONDS} seconds")
 
 
 def test_mkbar():
