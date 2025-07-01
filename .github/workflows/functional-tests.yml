@@ -11,8 +11,8 @@ jobs:
         steps:
             - name: Checkout repository
               run: |
-                  git clone ${{ github.repositoryUrl }} .
-                  git checkout ${{ github.ref }}
+                  git clone ${{ github.server_url }}/${{ github.repository }} .
+                  git fetch --all
 
             - name: Set up Python 3.11
               run: |
