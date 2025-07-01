@@ -4,8 +4,8 @@ import urllib.parse
 import json
 import random, time
 
-PORT=9345
-URL=f"http://0.0.0.0:{PORT}"
+PORT=8080
+URL=f"http://localhost:{PORT}"
 
 class TestExtraction(unittest.TestCase):
     def setUp(self):
