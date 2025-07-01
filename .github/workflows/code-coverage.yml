@@ -14,6 +14,15 @@ jobs:
               run: |
                   git clone ${{ github.server_url }}/${{ github.repository }} .
                   git fetch --all
+            
+            - name: Restore Rust cache
+                uses: actions/cache@v4
+                with:
+                  path: |
+                    ~/.cargo/registry
+                    ~/.cargo/git
+                    target
+                  key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
 
             - name: Install Rust
               run: |
