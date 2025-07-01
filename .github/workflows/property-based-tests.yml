@@ -36,10 +36,10 @@ jobs:
     
     - name: Run Property-Based Tests
       id: property-test
+      env:
+        PROPERTY_TEST_DURATION: ${{ steps.test-config.outputs.duration }}
       run: |
         cd tests
-        # Modifier la durée selon la branche
-        sed -i "s/TEST_DURATION_SECONDS = [0-9]*/TEST_DURATION_SECONDS = ${{ steps.test-config.outputs.duration }}/" propertybased.py
         echo "Running property-based tests for ${{ steps.test-config.outputs.duration }} seconds on ${{ steps.test-config.outputs.branch-type }}"
         python propertybased.py
       continue-on-error: false
