@@ -5,15 +5,21 @@ on:
     branches: ["**"]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality-check:
+    name: 🔍 Rust Quality Check (${{ matrix.check }})
     runs-on: macos-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        check: [fmt, clippy, audit]
 
     steps:
-      - name: 📥 Clone du dépôt
-        run: |
-          git clone ${{ github.server_url }}/${{ github.repository }} .
-          git fetch --all
+      - uses: actions/checkout@v4
 
       - name: Restore Rust cache
         uses: actions/cache@v4
@@ -24,34 +30,29 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
 
-      - name: 🛠️ Installer Rust
+      - name: Install Rust + Tools
         run: |
           curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.87.0
           source $HOME/.cargo/env
-          rustup component add rustfmt clippy
-          cargo install cargo-audit
 
-      - name: Vérification version (rustfmt)
+          if [ "${{ matrix.check }}" = "fmt" ]; then
+            rustup component add rustfmt
+          elif [ "${{ matrix.check }}" = "clippy" ]; then
+            rustup component add clippy
+          elif [ "${{ matrix.check }}" = "audit" ]; then
+            cargo install cargo-audit
+          fi
+
+      - name: Run ${{ matrix.check }}
         run: |
           source $HOME/.cargo/env
-          cargo fmt --version
 
-      - name: Vérification hash (rustfmt)
-        run: |
-          source $HOME/.cargo/env
-          shasum simeis-server/src/api.rs
+          if [ "${{ matrix.check }}" = "fmt" ]; then
+            cargo fmt --check
 
-      - name: Vérification formatage (rustfmt)
-        run: |
-          source $HOME/.cargo/env
-          cargo fmt --check
+          elif [ "${{ matrix.check }}" = "clippy" ]; then
+            cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: 🔍 Linting (clippy)
-        run: |
-          source $HOME/.cargo/env
-          cargo clippy
-
-      - name: 🛡️ Audit de sécurité
-        run: |
-          source $HOME/.cargo/env
-          cargo audit
+          elif [ "${{ matrix.check }}" = "audit" ]; then
+            cargo audit
+          fi
