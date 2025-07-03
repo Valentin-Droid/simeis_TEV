@@ -166,12 +166,13 @@ jobs:
                   NAME="${{ github.event.pull_request.base.ref }}"
                   NAME_CLEANED="${NAME#release/}"
                   echo "name=Release $NAME_CLEANED" >> "$GITHUB_OUTPUT"
+                  echo "name_cleaned=$NAME_CLEANED" >> "$GITHUB_OUTPUT"
 
             - name: Create or update GitHub Release
               uses: mini-bomba/create-github-release@v1.2.0
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
-                  tag: ${{ github.event.pull_request.base.ref }}
+                  tag: ${{ steps.format_release_name.outputs.name_cleaned }}
                   name: ${{ steps.format_release_name.outputs.name }}
                   body: |
                       Release triggered by @${{ github.actor }}
