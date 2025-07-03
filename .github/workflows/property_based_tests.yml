@@ -66,15 +66,26 @@ jobs:
         - name: Determine test duration
           id: test-config
           run: |
-            if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
-            echo "duration=120" >> $GITHUB_OUTPUT
-            echo "branch-type=main" >> $GITHUB_OUTPUT
-            elif [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
-            echo "duration=60" >> $GITHUB_OUTPUT
-            echo "branch-type=develop" >> $GITHUB_OUTPUT
+            echo "github.ref: ${{ github.ref }}"
+            echo "github.base_ref: ${{ github.base_ref }}"
+            echo "github.head_ref: ${{ github.head_ref }}"
+            
+            BRANCH="${{ github.ref }}"
+            
+            # Si c’est une PR, base_ref correspond à la branche cible
+            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              BRANCH="refs/heads/${{ github.base_ref }}"
+            fi
+
+            if [[ "$BRANCH" == "refs/heads/main" ]]; then
+              echo "duration=120" >> $GITHUB_OUTPUT
+              echo "branch-type=main" >> $GITHUB_OUTPUT
+            elif [[ "$BRANCH" == "refs/heads/develop" ]]; then
+              echo "duration=60" >> $GITHUB_OUTPUT
+              echo "branch-type=develop" >> $GITHUB_OUTPUT
             else
-            echo "duration=5" >> $GITHUB_OUTPUT
-            echo "branch-type=pr" >> $GITHUB_OUTPUT
+              echo "duration=5" >> $GITHUB_OUTPUT
+              echo "branch-type=other" >> $GITHUB_OUTPUT
             fi
         
         - name: Run Property-Based Tests

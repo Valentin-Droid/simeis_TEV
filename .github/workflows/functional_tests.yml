@@ -1,10 +1,8 @@
 name: Functional Heavy Tests
-
 on:
     workflow_dispatch:
     release:
         types: [published]
-
 jobs:
     functional-tests:
         runs-on: ubuntu-latest
@@ -14,18 +12,46 @@ jobs:
                   git clone ${{ github.server_url }}/${{ github.repository }} .
                   git fetch --all
 
-            - name: Set up Python 3.12
+            - name: Set up Python 3.10
               run: |
                   sudo apt-get update
-                  sudo apt-get install -y python3.12 python3.12-venv
-                  python3.12 -m pip install --upgrade pip
+                  sudo apt-get install -y python3.10 python3.10-venv
+                  python3.10 -m pip install --upgrade pip
 
-            - name: Build and start simeis-server
+            - name: Install Rust toolchain
               run: |
-                  cargo build --release --manifest-path simeis-server/Cargo.toml
-                  nohup ./target/release/simeis-server &
-                  sleep 10
+                  curl https://sh.rustup.rs -sSf | sh -s -- -y
+                  source $HOME/.cargo/env
+                  rustup default stable
+                  rustup target add x86_64-unknown-linux-gnu
 
+            - name: Build simeis-server (x86_64)
+              run: |
+                  source $HOME/.cargo/env
+                  cargo build --release --target x86_64-unknown-linux-gnu --manifest-path simeis-server/Cargo.toml
+
+            - name: Start simeis-server (x86_64)
+              run: |
+                  source $HOME/.cargo/env
+                  ./target/x86_64-unknown-linux-gnu/release/simeis-server > server.log 2>&1 &
+                  echo $! > simeis-server.pid
+                  sleep 2
+                  tail -n 50 server.log || true
+
+            - name: Install netcat
+              run: sudo apt-get update && sudo apt-get install -y netcat
+
+            - name: Wait for server to be ready
+              run: |
+                  for i in {1..60}; do
+                    if nc -z localhost 8080; then
+                      echo "Server is up!"
+                      break
+                    fi
+                    echo "Waiting for server..."
+                    sleep 1
+                  done
+                  nc -z localhost 8080
             - name: Run functional tests
               run: |
-                  python3.12 -m unittest discover -s example -p 'test_*.py'
+                  python3.10 -m unittest discover -s example -p 'test_*.py'
