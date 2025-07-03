@@ -18,8 +18,10 @@ jobs:
         rust: [1.75.0, 1.80.0, 1.85.0, 1.88.0]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: 📥 Checkout repository
+        run: |
+          git clone ${{ github.server_url }}/${{ github.repository }} .
+          git fetch --all
 
       - name: Install Rust ${{ matrix.rust }}
         run: |
