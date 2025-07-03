@@ -1,0 +1,8 @@
+Package: simeis-server
+Version: 1.0.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: Valentin-Droid <valentin@example.com>
+Depends: cmatrix
+Description: Serveur Simeis Serveur du projet Simeis, compilé en Rust.
