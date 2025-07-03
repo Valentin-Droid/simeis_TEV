@@ -5,7 +5,6 @@ set -e
 grep -q '^simeis:' /etc/passwd || useradd --system --no-create-home --shell /usr/sbin/nologin simeis
 
 # Installer le binaire
-install -m 755 /usr/bin/simeis-server /usr/bin/simeis-server
 chown simeis:simeis /usr/bin/simeis-server
 
 # Installer la page de manuel
