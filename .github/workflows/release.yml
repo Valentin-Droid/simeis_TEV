@@ -9,17 +9,13 @@ jobs:
         if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.base.ref, 'release/')
         strategy:
             matrix:
-                os: [ubuntu-latest, windows-latest]
+                os: [ubuntu-latest]
                 include:
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       suffix: linux-x64
                       extension: ''
-                    - os: windows-latest
-                      target: x86_64-pc-windows-msvc
-                      suffix: windows-x64
-                      extension: '.exe'
-        runs-on: ${{ matrix.os }}
+        runs-on: ubuntu-latest
         outputs:
             git-hash: ${{ steps.git-info.outputs.git-hash }}
             git-message: ${{ steps.git-info.outputs.git-message }}
@@ -43,21 +39,11 @@ jobs:
                   # Pas de cache, on laisse Cargo gérer ses dépendances
               shell: bash
 
-            - name: 🔧 Install Typst for documentation (Linux only)
-              if: matrix.os == 'ubuntu-latest'
+            - name: 🔧 Install Typst for documentation
               run: |
                   curl -fsSL https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ
                   sudo mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
               shell: bash
-
-            - name: 🔧 Install Typst for documentation (Windows only)
-              if: matrix.os == 'windows-latest'
-              run: |
-                  $url = "https://github.com/typst/typst/releases/latest/download/typst-x86_64-pc-windows-msvc.zip"
-                  Invoke-WebRequest -Uri $url -OutFile typst.zip
-                  Expand-Archive typst.zip -DestinationPath .
-                  Move-Item typst-x86_64-pc-windows-msvc/typst.exe C:/Windows/System32/
-              shell: pwsh
 
             - name: 🏗️ Build release binary
               run: |
@@ -75,27 +61,20 @@ jobs:
                   echo "EOF" >> "$GITHUB_OUTPUT"
               shell: bash
 
-            - name: 📖 Generate documentation (Linux only)
-              if: matrix.os == 'ubuntu-latest'
+            - name: 📖 Generate documentation
               run: |
                   typst compile doc/manual.typ doc/manual.pdf
               shell: bash
 
-            - name: 📖 Generate documentation (Windows only)
-              if: matrix.os == 'windows-latest'
-              run: |
-                  typst compile doc/manual.typ doc/manual.pdf
-              shell: pwsh
-
-            - name: 📦 Prepare release artifacts
+            - name: Prepare release artifacts
               run: |
                   mkdir release-artifacts
                   cp target/${{ matrix.target }}/release/simeis-server${{ matrix.extension }} release-artifacts/simeis-server-${{ matrix.suffix }}${{ matrix.extension }}
               shell: bash
 
-            - name: 📦 Prepare documentation (Linux only)
-              if: matrix.os == 'ubuntu-latest'
+            - name: 📦 Prepare documentation
               run: |
+                  mkdir -p release-artifacts
                   cp doc/manual.pdf release-artifacts/simeis-manual.pdf
                   tar -czf release-artifacts/simeis-source-${{ github.ref_name }}.tar.gz \
                     --exclude=target \
@@ -135,6 +114,52 @@ jobs:
                   find ./artifacts -name "simeis-source-*.tar.gz" -type f -exec cp {} release-artifacts/ \;
                   ls -la release-artifacts/
 
+            - name: 📝 Generate changelog from merged PRs
+              id: changelog
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  # Get the latest release tag (if any)
+                  latest_tag=$(git tag --sort=-creatordate | grep '^release/' | head -n1)
+                  if [ -z "$latest_tag" ]; then
+                    base_sha=$(git rev-list --max-parents=0 HEAD)
+                  else
+                    base_sha=$(git rev-list -n 1 "$latest_tag")
+                  fi
+                  head_sha=$(git rev-parse HEAD)
+                  # Get merged PRs between base_sha and head_sha
+                  prs=$(gh pr list --state merged --search "base:$(echo ${{ github.event.pull_request.base.ref }})" --json number,title,headRefName,url,mergedAt --jq '.[] | select(.mergedAt != null) | select(.mergedAt >= ("$(git show -s --format=%cI $base_sha)"))')
+                  # Classify PRs
+                  features=""
+                  bugfixes=""
+                  others=""
+                  while read -r pr; do
+                    pr_number=$(echo "$pr" | jq -r '.number')
+                    pr_title=$(echo "$pr" | jq -r '.title')
+                    pr_head=$(echo "$pr" | jq -r '.headRefName')
+                    pr_url=$(echo "$pr" | jq -r '.url')
+                    if [[ "$pr_head" =~ ^feature/ ]]; then
+                      features+="- [#$pr_number]($pr_url) $pr_title\n"
+                    elif [[ "$pr_head" =~ ^bug/ ]]; then
+                      bugfixes+="- [#$pr_number]($pr_url) $pr_title\n"
+                    else
+                      others+="- [#$pr_number]($pr_url) $pr_title\n"
+                    fi
+                  done < <(gh pr list --state merged --search "base:$(echo ${{ github.event.pull_request.base.ref }})" --json number,title,headRefName,url,mergedAt --jq '.[] | select(.mergedAt != null) | select(.mergedAt >= ("$(git show -s --format=%cI $base_sha)"))')
+                  # Write changelog
+                  echo "## ✨ Features" > changelog.md
+                  if [ -n "$features" ]; then echo -e "$features" >> changelog.md; else echo "_Aucune_" >> changelog.md; fi
+                  echo "\n## 🐛 Bugfix" >> changelog.md
+                  if [ -n "$bugfixes" ]; then echo -e "$bugfixes" >> changelog.md; else echo "_Aucun_" >> changelog.md; fi
+                  echo "\n## 🔄 Autre" >> changelog.md
+                  if [ -n "$others" ]; then echo -e "$others" >> changelog.md; else echo "_Aucun_" >> changelog.md; fi
+                  # Export for next step
+                  changelog_content=$(cat changelog.md)
+                  changelog_content="${changelog_content//'%'/'%25'}"
+                  changelog_content="${changelog_content//$'\n'/'%0A'}"
+                  changelog_content="${changelog_content//$'\r'/'%0D'}"
+                  echo "changelog=$changelog_content" >> "$GITHUB_OUTPUT"
+
             - name: Create or update GitHub Release
               uses: mini-bomba/create-github-release@v1.2.0
               with:
@@ -147,8 +172,10 @@ jobs:
                       Message:
                       ${{ needs.build-release.outputs.git-message }}
 
+                      ### Changelog
+                      ${{ steps.changelog.outputs.changelog }}
+
                       - `simeis-server-linux-x64` : Binaire principal optimisé pour Linux x64
-                      - `simeis-server-windows-x64.exe` : Binaire principal optimisé pour Windows x64
                       - `simeis-manual.pdf` : Documentation complète du projet
                       - `simeis-source-${{ github.event.pull_request.base.ref }}.tar.gz` : Code source de la release
 
