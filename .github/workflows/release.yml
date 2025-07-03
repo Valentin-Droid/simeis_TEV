@@ -76,7 +76,9 @@ jobs:
               run: |
                   mkdir -p release-artifacts
                   cp doc/manual.pdf release-artifacts/simeis-manual.pdf
-                  tar -czf release-artifacts/simeis-source-${{ github.ref_name }}.tar.gz \
+                  VERSION="${{ github.event.pull_request.base.ref }}"
+                  VERSION_CLEANED="${VERSION#release/}"
+                  tar -czf release-artifacts/simeis-source-${VERSION_CLEANED}.tar.gz \
                     --exclude=target \
                     --exclude=.git \
                     --exclude=build \
