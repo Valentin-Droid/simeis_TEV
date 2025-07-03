@@ -32,7 +32,9 @@ jobs:
             - name: 🦀 Setup Rust
               run: |
                   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-                  source ~/.cargo/env
+                  if [ "$RUNNER_OS" != "Windows" ]; then
+                    source ~/.cargo/env
+                  fi
                   rustup target add ${{ matrix.target }}
               shell: bash
 
