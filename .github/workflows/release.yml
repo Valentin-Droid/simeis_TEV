@@ -20,7 +20,6 @@ jobs:
                   echo "GIT_MESSAGE<<EOF" >> $GITHUB_ENV
                   git log -1 --pretty=%B >> $GITHUB_ENV
                   echo "EOF" >> $GITHUB_ENV
-            # Ajoutez ici les étapes de build si nécessaire
             - name: Create or update GitHub Release
               uses: mini-bomba/create-github-release@v1.2.0
               with:
