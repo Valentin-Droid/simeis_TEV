@@ -1,0 +1,35 @@
+name: Release Automation
+
+on:
+    push:
+        branches:
+            - 'release/**'
+
+jobs:
+    create_or_update_release:
+        runs-on: ubuntu-latest
+        steps:
+            - name: 📥 Checkout repository
+              run: |
+                  git clone ${{ github.server_url }}/${{ github.repository }} .
+                  git fetch --all
+
+            - name: Set up Git info for release
+              run: |
+                  echo "GIT_HASH=$(git rev-parse --short=8 HEAD)" >> $GITHUB_ENV
+                  echo "GIT_MESSAGE<<EOF" >> $GITHUB_ENV
+                  git log -1 --pretty=%B >> $GITHUB_ENV
+                  echo "EOF" >> $GITHUB_ENV
+            - name: Create or update GitHub Release
+              uses: mini-bomba/create-github-release@v1.2.0
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  tag: ${{ github.ref_name }}
+                  name: 'Release ${{ github.ref_name }}'
+                  body: |
+                      Release triggered by @${{ github.actor }}
+                      Commit: ${{ env.GIT_HASH }}
+                      Message:
+                      ${{ env.GIT_MESSAGE }}
+                      [Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+                  clear_attachments: true
