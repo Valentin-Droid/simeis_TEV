@@ -1,12 +1,12 @@
 name: Release Automation
 
 on:
-    push:
-        branches:
-            - 'release/**'
+    pull_request:
+        types: [closed]
 
 jobs:
     build-release:
+        if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.base.ref, 'release/')
         strategy:
             matrix:
                 os: [ubuntu-latest, windows-latest]
@@ -14,11 +14,11 @@ jobs:
                     - os: ubuntu-latest
                       target: x86_64-unknown-linux-gnu
                       suffix: linux-x64
-                      extension: ""
+                      extension: ''
                     - os: windows-latest
                       target: x86_64-pc-windows-msvc
                       suffix: windows-x64
-                      extension: ".exe"
+                      extension: '.exe'
         runs-on: ${{ matrix.os }}
         outputs:
             git-hash: ${{ steps.git-info.outputs.git-hash }}
@@ -26,24 +26,27 @@ jobs:
         steps:
             - name: 📥 Checkout repository
               run: |
-                git clone ${{ github.server_url }}/${{ github.repository }} .
-                git fetch --all
+                  git clone ${{ github.server_url }}/${{ github.repository }} .
+                  git fetch --all
 
             - name: 🦀 Setup Rust
               run: |
                   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
                   source ~/.cargo/env
                   rustup target add ${{ matrix.target }}
+              shell: bash
 
             - name: 📦 Prepare Rust environment
               run: |
                   # Pas de cache, on laisse Cargo gérer ses dépendances
+              shell: bash
 
             - name: 🔧 Install Typst for documentation (Linux only)
               if: matrix.os == 'ubuntu-latest'
               run: |
                   curl -fsSL https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ
                   sudo mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
+              shell: bash
 
             - name: 🔧 Install Typst for documentation (Windows only)
               if: matrix.os == 'windows-latest'
@@ -52,55 +55,62 @@ jobs:
                   Invoke-WebRequest -Uri $url -OutFile typst.zip
                   Expand-Archive typst.zip -DestinationPath .
                   Move-Item typst-x86_64-pc-windows-msvc/typst.exe C:/Windows/System32/
+              shell: pwsh
 
             - name: 🏗️ Build release binary
               run: |
                   cargo build --release --target ${{ matrix.target }}
+              shell: bash
 
             - name: 📋 Set up Git info for release
               id: git-info
               run: |
-                  $gitHash = git rev-parse --short=8 HEAD
-                  $gitMessage = git log -1 --pretty=%B
-                  echo "git-hash=$gitHash" >> $env:GITHUB_OUTPUT
-                  echo "git-message<<EOF" >> $env:GITHUB_OUTPUT
-                  echo "$gitMessage" >> $env:GITHUB_OUTPUT
-                  echo "EOF" >> $env:GITHUB_OUTPUT
-              shell: pwsh
+                  gitHash=$(git rev-parse --short=8 HEAD)
+                  gitMessage=$(git log -1 --pretty=%B)
+                  echo "git-hash=$gitHash" >> "$GITHUB_OUTPUT"
+                  echo "git-message<<EOF" >> "$GITHUB_OUTPUT"
+                  echo "$gitMessage" >> "$GITHUB_OUTPUT"
+                  echo "EOF" >> "$GITHUB_OUTPUT"
+              shell: bash
 
             - name: 📖 Generate documentation (Linux only)
               if: matrix.os == 'ubuntu-latest'
               run: |
                   typst compile doc/manual.typ doc/manual.pdf
+              shell: bash
 
             - name: 📖 Generate documentation (Windows only)
               if: matrix.os == 'windows-latest'
               run: |
                   typst compile doc/manual.typ doc/manual.pdf
+              shell: pwsh
 
             - name: 📦 Prepare release artifacts
               run: |
                   mkdir release-artifacts
                   cp target/${{ matrix.target }}/release/simeis-server${{ matrix.extension }} release-artifacts/simeis-server-${{ matrix.suffix }}${{ matrix.extension }}
-              shell: pwsh
+              shell: bash
 
             - name: 📦 Prepare documentation (Linux only)
               if: matrix.os == 'ubuntu-latest'
               run: |
                   cp doc/manual.pdf release-artifacts/simeis-manual.pdf
                   tar -czf release-artifacts/simeis-source-${{ github.ref_name }}.tar.gz \
-                      --exclude=target \
-                      --exclude=.git \
-                      --exclude=build \
-                      .
+                    --exclude=target \
+                    --exclude=.git \
+                    --exclude=build \
+                    .
+              shell: bash
 
             - name: 📤 Store artifacts temporarily
               run: |
                   mkdir -p /tmp/shared-artifacts
                   cp -r release-artifacts/* /tmp/shared-artifacts/ || true
                   ls -la /tmp/shared-artifacts/
+              shell: bash
 
     create_or_update_release:
+        if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.base.ref, 'release/')
         needs: build-release
         runs-on: ubuntu-latest
         steps:
@@ -123,30 +133,23 @@ jobs:
                   find ./artifacts -name "simeis-source-*.tar.gz" -type f -exec cp {} release-artifacts/ \;
                   ls -la release-artifacts/
 
-            - name: 📋 Set up Git info for release
-              run: |
-                  echo "GIT_HASH=$(git rev-parse --short=8 HEAD)" >> $GITHUB_ENV
-                  echo "GIT_MESSAGE<<EOF" >> $GITHUB_ENV
-                  git log -1 --pretty=%B >> $GITHUB_ENV
-                  echo "EOF" >> $GITHUB_ENV
-
-            - name: 🚀 Create or update GitHub Release
+            - name: Create or update GitHub Release
               uses: mini-bomba/create-github-release@v1.2.0
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
-                  tag: ${{ github.ref_name }}
-                  name: 'Release ${{ github.ref_name }}'
+                  tag: ${{ github.event.pull_request.base.ref }}
+                  name: 'Release ${{ github.event.pull_request.base.ref }}'
                   body: |
                       Release triggered by @${{ github.actor }}
-                      Commit: ${{ env.GIT_HASH }}
+                      Commit: ${{ needs.build-release.outputs.git-hash }}
                       Message:
-                      ${{ env.GIT_MESSAGE }}
-                      
+                      ${{ needs.build-release.outputs.git-message }}
+
                       - `simeis-server-linux-x64` : Binaire principal optimisé pour Linux x64
                       - `simeis-server-windows-x64.exe` : Binaire principal optimisé pour Windows x64
                       - `simeis-manual.pdf` : Documentation complète du projet
-                      - `simeis-source-${{ github.ref_name }}.tar.gz` : Code source de la release
-                      
+                      - `simeis-source-${{ github.event.pull_request.base.ref }}.tar.gz` : Code source de la release
+
                       [Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
                   files: |
                       release-artifacts/*
