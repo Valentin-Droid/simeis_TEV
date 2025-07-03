@@ -160,12 +160,19 @@ jobs:
                   changelog_content="${changelog_content//$'\r'/'%0D'}"
                   echo "changelog=$changelog_content" >> "$GITHUB_OUTPUT"
 
+            - name: Format release name
+              id: format_release_name
+              run: |
+                  NAME="${{ github.event.pull_request.base.ref }}"
+                  NAME_CLEANED="${NAME#release/}"
+                  echo "name=Release $NAME_CLEANED" >> "$GITHUB_OUTPUT"
+
             - name: Create or update GitHub Release
               uses: mini-bomba/create-github-release@v1.2.0
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
                   tag: ${{ github.event.pull_request.base.ref }}
-                  name: 'Release ${{ github.event.pull_request.base.ref }}'
+                  name: ${{ steps.format_release_name.outputs.name }}
                   body: |
                       Release triggered by @${{ github.actor }}
                       Commit: ${{ needs.build-release.outputs.git-hash }}
