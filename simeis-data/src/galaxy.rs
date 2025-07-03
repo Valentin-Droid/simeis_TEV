@@ -1,3 +1,4 @@
+#![allow(unexpected_cfgs)]
 use rand::rngs::ThreadRng;
 use rand::Rng;
 use scan::ScanResult;
@@ -13,7 +14,7 @@ type GalaxySector = (
     (SpaceUnit, SpaceUnit),
     (SpaceUnit, SpaceUnit),
 );
-
+//TODO: #24 test issue
 const SECTOR_SIZE: (SpaceUnit, SpaceUnit, SpaceUnit) = (5000, 5000, 5000);
 const PLANETS_PER_SECTOR: usize = 3;
 const STATION_FPLANET_DIST: f64 = 500.0;
@@ -101,13 +102,13 @@ impl GalaxyMap {
         let mut objects = vec![];
         for (coord, obj) in self.objects.iter() {
             let (x, y, z) = coord;
-            if (x < &sector.0.0) || (x > &sector.0.1) {
+            if (x < &sector.0 .0) || (x > &sector.0 .1) {
                 continue;
             }
-            if (y < &sector.1.0) || (y > &sector.1.1) {
+            if (y < &sector.1 .0) || (y > &sector.1 .1) {
                 continue;
             }
-            if (z < &sector.2.0) || (z > &sector.2.1) {
+            if (z < &sector.2 .0) || (z > &sector.2 .1) {
                 continue;
             }
             objects.push(obj);
@@ -121,12 +122,12 @@ pub struct Galaxy(Arc<RwLock<GalaxyMap>>);
 
 impl Galaxy {
     pub fn init() -> Galaxy {
-        Galaxy(Arc::new(RwLock::new(GalaxyMap::empty())))    // FIXME Here
+        Galaxy(Arc::new(RwLock::new(GalaxyMap::empty()))) // FIXME Here
     }
 
     // TODO (#11) Generate based on the galaxy
     pub async fn init_new_station(&self) -> (StationId, SpaceCoord) {
-        let mut galaxy = self.0.write().await;     // OK
+        let mut galaxy = self.0.write().await; // OK
         let mut rng = rand::rng();
 
         let mut seccoord = (rng.random(), rng.random(), rng.random());
@@ -137,7 +138,8 @@ impl Galaxy {
         let ind = galaxy.generate_sector(&seccoord);
         let sector = galaxy.discovered.get(ind).unwrap();
 
-        let Some(SpaceObject::Planet(pla)) = galaxy.list_objects_in_sector(&sector)
+        let Some(SpaceObject::Planet(pla)) = galaxy
+            .list_objects_in_sector(&sector)
             .iter()
             .filter(|obj| matches!(obj, SpaceObject::Planet(_)))
             .nth(0)
@@ -154,9 +156,17 @@ impl Galaxy {
             }
 
             let mut mindist = None;
-            for pla in galaxy.list_objects_in_sector(&sector)
+            for pla in galaxy
+                .list_objects_in_sector(&sector)
                 .iter()
-                .filter_map(|obj| if let SpaceObject::Planet(p) = obj { Some(p) } else { None }) {
+                .filter_map(|obj| {
+                    if let SpaceObject::Planet(p) = obj {
+                        Some(p)
+                    } else {
+                        None
+                    }
+                })
+            {
                 let dist = get_distance(&pla.position, &coord);
                 if let Some(ref mut m) = mindist {
                     if dist < *m {
@@ -178,13 +188,15 @@ impl Galaxy {
             }
         }
         let station = Arc::new(RwLock::new(station::Station::init(id, coord)));
-        galaxy.insert(&coord, SpaceObject::BaseStation(station)).unwrap();
+        galaxy
+            .insert(&coord, SpaceObject::BaseStation(station))
+            .unwrap();
         drop(galaxy);
         return (id, coord);
     }
 
     pub async fn get_station(&self, coord: &SpaceCoord) -> Option<Arc<RwLock<station::Station>>> {
-        let galaxy = self.0.read().await;     // OK
+        let galaxy = self.0.read().await; // OK
         let obj = galaxy.get(coord)?;
         let SpaceObject::BaseStation(station) = obj else {
             return None;
@@ -193,7 +205,7 @@ impl Galaxy {
     }
 
     pub async fn get_planet(&self, coord: &SpaceCoord) -> Option<Arc<planet::Planet>> {
-        let galaxy = self.0.read().await;     // OK
+        let galaxy = self.0.read().await; // OK
         let obj = galaxy.get(coord)?;
         let SpaceObject::Planet(planet) = obj else {
             return None;
@@ -202,7 +214,7 @@ impl Galaxy {
     }
 
     pub async fn scan_sector(&self, rank: u8, center: &SpaceCoord) -> ScanResult {
-        let galaxy = self.0.read().await;     // OK 
+        let galaxy = self.0.read().await; // OK
         let strengh = (rank - 1) as f64;
         let mut results = ScanResult::empty();
         debug_assert!(strengh >= 0.0);
@@ -211,7 +223,7 @@ impl Galaxy {
                 results.add(rank, obj).await;
             }
         }
-        debug_assert!(results.planets.len() > 0);    // We should always have some planets
+        debug_assert!(results.planets.len() > 0); // We should always have some planets
         results
     }
 }
@@ -258,9 +270,12 @@ pub fn translation(start: SpaceCoord, direction: (f64, f64, f64), dist: f64) -> 
 }
 
 fn is_in_sector(coord: &SpaceCoord, sector: &GalaxySector) -> bool {
-    coord.0 >= sector.0.0 && coord.0 < sector.0.1
-    && coord.1 >= sector.1.0 && coord.1 < sector.1.1
-    && coord.2 >= sector.2.0 && coord.2 < sector.2.1
+    coord.0 >= sector.0 .0
+        && coord.0 < sector.0 .1
+        && coord.1 >= sector.1 .0
+        && coord.1 < sector.1 .1
+        && coord.2 >= sector.2 .0
+        && coord.2 < sector.2 .1
 }
 
 // TODO (#27)    Make this scan use a sphere from the center point
@@ -309,7 +324,7 @@ fn sectors_around(center: &SpaceCoord, radius: f64) -> Vec<GalaxySector> {
 
 fn get_rand_coord_near(obj: &SpaceCoord, dist: f64, rng: &mut ThreadRng) -> SpaceCoord {
     let theta = rng.random_range(0.0..2.0 * std::f64::consts::PI); // azimuthal angle
-    let phi = rng.random_range(0.0..std::f64::consts::PI);         // polar angle
+    let phi = rng.random_range(0.0..std::f64::consts::PI); // polar angle
     let x = (obj.0 as f64) + (dist * phi.sin() * theta.cos());
     let y = (obj.1 as f64) + (dist * phi.sin() * theta.sin());
     let z = (obj.2 as f64) + (dist * phi.cos());
@@ -326,11 +341,47 @@ fn test_compute_sector() {
         let sec = compute_sector(x, y, z);
         assert!(is_in_sector(&(x, y, z), &sec));
     }
-    assert_eq!(compute_sector(SECTOR_SIZE.0-1, 0, 0), ((0, SECTOR_SIZE.0), (0, SECTOR_SIZE.1), (0, SECTOR_SIZE.2)));
-    assert_eq!(compute_sector(0, SECTOR_SIZE.1-1, 0), ((0, SECTOR_SIZE.0), (0, SECTOR_SIZE.1), (0, SECTOR_SIZE.2)));
-    assert_eq!(compute_sector(0, 0, SECTOR_SIZE.2-1), ((0, SECTOR_SIZE.0), (0, SECTOR_SIZE.1), (0, SECTOR_SIZE.2)));
+    assert_eq!(
+        compute_sector(SECTOR_SIZE.0 - 1, 0, 0),
+        ((0, SECTOR_SIZE.0), (0, SECTOR_SIZE.1), (0, SECTOR_SIZE.2))
+    );
+    assert_eq!(
+        compute_sector(0, SECTOR_SIZE.1 - 1, 0),
+        ((0, SECTOR_SIZE.0), (0, SECTOR_SIZE.1), (0, SECTOR_SIZE.2))
+    );
+    assert_eq!(
+        compute_sector(0, 0, SECTOR_SIZE.2 - 1),
+        ((0, SECTOR_SIZE.0), (0, SECTOR_SIZE.1), (0, SECTOR_SIZE.2))
+    );
 
-    assert_eq!(compute_sector(SECTOR_SIZE.0, 0, 0), ((SECTOR_SIZE.0, 2*SECTOR_SIZE.0), (0, SECTOR_SIZE.1), (0, SECTOR_SIZE.2)));
-    assert_eq!(compute_sector(0, SECTOR_SIZE.1, 0), ((0, SECTOR_SIZE.0), (SECTOR_SIZE.1, 2*SECTOR_SIZE.1), (0, SECTOR_SIZE.2)));
-    assert_eq!(compute_sector(0, 0, SECTOR_SIZE.2), ((0, SECTOR_SIZE.0), (0, SECTOR_SIZE.1), (SECTOR_SIZE.2, 2*SECTOR_SIZE.2)));
+    assert_eq!(
+        compute_sector(SECTOR_SIZE.0, 0, 0),
+        (
+            (SECTOR_SIZE.0, 2 * SECTOR_SIZE.0),
+            (0, SECTOR_SIZE.1),
+            (0, SECTOR_SIZE.2)
+        )
+    );
+    assert_eq!(
+        compute_sector(0, SECTOR_SIZE.1, 0),
+        (
+            (0, SECTOR_SIZE.0),
+            (SECTOR_SIZE.1, 2 * SECTOR_SIZE.1),
+            (0, SECTOR_SIZE.2)
+        )
+    );
+    assert_eq!(
+        compute_sector(0, 0, SECTOR_SIZE.2),
+        (
+            (0, SECTOR_SIZE.0),
+            (0, SECTOR_SIZE.1),
+            (SECTOR_SIZE.2, 2 * SECTOR_SIZE.2)
+        )
+    );
+}
+
+#[cfg(feature = "heavy_testing")]
+#[test]
+fn test_heavy_testing() {
+    assert!(false);
 }

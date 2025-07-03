@@ -1,0 +1,47 @@
+name: Check TODOs have matching open issues
+
+on:
+    pull_request:
+        branches: ['main']
+
+jobs:
+    check-todos:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout PR code
+              run: |
+                  git clone ${{ github.server_url }}/${{ github.repository }} .
+                  git fetch --all
+
+            - name: Extract TODOs with issue references
+              id: extract_todos
+              run: |
+                  git fetch origin main
+                  git diff origin/main...HEAD --unified=0 | grep '^+.*TODO: #' | grep -o 'TODO: #[0-9]\+' | sort | uniq > todos_with_issues.txt || true
+                  cat todos_with_issues.txt
+
+            - name: Verify matching GitHub issues exist and are open
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  failed=0
+
+                  while read -r todo; do
+                    issue_number=$(echo "$todo" | grep -o '[0-9]\+')
+                    echo "Checking issue #$issue_number..."
+
+                    if gh issue view "$issue_number" --json state -q '.state' | grep -q 'OPEN'; then
+                      echo "Issue #$issue_number is open."
+                    else
+                      echo "Issue #$issue_number is missing or closed!"
+                      failed=1
+                    fi
+                  done < todos_with_issues.txt
+
+                  if [ "$failed" -eq 1 ]; then
+                    echo "Some TODOs reference missing or closed issues. Please fix them."
+                    exit 1
+                  else
+                    echo "All referenced issues are open."
+                  fi

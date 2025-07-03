@@ -16,9 +16,18 @@ jobs:
           git clone ${{ github.server_url }}/${{ github.repository }} .
           git fetch --all
 
+      - name: Restore Rust cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
+
       - name: 🔧 Install Rust
         run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.85.0
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
       - name: ⚙️ Build (release)
@@ -32,7 +41,7 @@ jobs:
           cargo test
 
   doc:
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request' && github.base_ref == 'main'
     runs-on: ubuntu-latest
     needs: build-and-test
 
@@ -42,11 +51,8 @@ jobs:
           git clone ${{ github.server_url }}/${{ github.repository }} .
           git fetch --all
 
-      - name: 📦 Install Typst
+      - name: 📦 Install Typst and build manual
         run: |
-          curl -sSf https://typst.app/install.sh | bash
-          echo "$HOME/.typst" >> $GITHUB_PATH
-
-      - name: 📝 Build manual
-        run: |
-          ~/.typst/typst compile doc/manual.typ doc/manual.pdf
+          wget -qO- https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ
+          export PATH="$PWD/typst-x86_64-unknown-linux-musl:$PATH"
+          typst compile doc/manual.typ doc/manual.pdf

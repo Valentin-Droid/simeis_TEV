@@ -1,0 +1,26 @@
+name: PR Target Release Branch Validation
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+
+jobs:
+    validate-pr-source:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Check PR source and target branches
+              env:
+                  GITHUB_EVENT_PATH: ${{ github.event_path }}
+              run: |
+                  target=$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")
+                  source=$(jq -r '.pull_request.head.ref' "$GITHUB_EVENT_PATH")
+                  validSource=false
+                  if [ "$source" = "main" ] || [[ "$source" == bug/* ]]; then
+                    validSource=true
+                  fi
+                  if [[ "$target" == release/* ]] && [ "$validSource" = false ]; then
+                    echo "This PR targets a release branch but the source branch is not 'main' or 'bug/x'. Failing job."
+                    exit 1
+                  else
+                    echo "PR source/target branch combination is valid."
+                  fi

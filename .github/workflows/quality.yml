@@ -1,0 +1,61 @@
+name: Rust Code Quality
+
+on:
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality-check:
+    name: 🔍 Rust Quality Check (${{ matrix.check }})
+    runs-on: macos-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        check: [fmt, clippy, audit]
+
+    steps:
+      - name: 📥 Checkout repository
+        run: |
+          git clone ${{ github.server_url }}/${{ github.repository }} .
+          git fetch --all
+
+      - name: Restore Rust cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', '**/*.rs') }}
+
+      - name: Install Rust + Tools
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.87.0
+          source $HOME/.cargo/env
+
+          if [ "${{ matrix.check }}" = "fmt" ]; then
+            rustup component add rustfmt
+          elif [ "${{ matrix.check }}" = "clippy" ]; then
+            rustup component add clippy
+          elif [ "${{ matrix.check }}" = "audit" ]; then
+            cargo install cargo-audit
+          fi
+
+      - name: Run ${{ matrix.check }}
+        run: |
+          source $HOME/.cargo/env
+
+          if [ "${{ matrix.check }}" = "fmt" ]; then
+            cargo fmt --check
+
+          elif [ "${{ matrix.check }}" = "clippy" ]; then
+            cargo clippy --all-targets --all-features
+
+          elif [ "${{ matrix.check }}" = "audit" ]; then
+            cargo audit
+          fi

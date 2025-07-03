@@ -1,0 +1,36 @@
+name: Cross Build Matrix
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }} - Rust ${{ matrix.rust }}
+    runs-on: ${{ matrix.os }}
+    if: startsWith(github.head_ref, 'feature/')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [1.75.0, 1.80.0, 1.85.0, 1.88.0]
+
+    steps:
+      - name: 📥 Checkout repository
+        run: |
+          git clone ${{ github.server_url }}/${{ github.repository }} .
+          git fetch --all
+
+      - name: Install Rust ${{ matrix.rust }}
+        run: |
+          curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain ${{ matrix.rust }}
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          source $HOME/.cargo/env
+
+      - name: Build project in release mode
+        run: |
+          source $HOME/.cargo/env
+          cd simeis-server
+          cargo build --release
