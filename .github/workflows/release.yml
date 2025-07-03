@@ -21,9 +21,10 @@ jobs:
             git-message: ${{ steps.git-info.outputs.git-message }}
         steps:
             - name: 📥 Checkout repository
-              run: |
-                  git clone ${{ github.server_url }}/${{ github.repository }} .
-                  git fetch --all
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: 🦀 Setup Rust
               run: |
@@ -98,9 +99,10 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: 📥 Checkout repository
-              run: |
-                  git clone ${{ github.server_url }}/${{ github.repository }} .
-                  git fetch --all
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: 📥 Download release artifacts
               uses: actions/download-artifact@v4
