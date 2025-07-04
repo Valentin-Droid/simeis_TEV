@@ -26,3 +26,5 @@ Makefile
 
 # === Fichiers d'exemple du projet ==
 example/*.json
+
+.env
