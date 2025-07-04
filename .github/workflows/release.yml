@@ -48,17 +48,23 @@ jobs:
 
             - name: 🐳 Build Docker image
               run: |
-                  docker build -f .github/Dockerfile -t simeis-server:${{ github.sha }} .
+                  VERSION="${{ github.event.pull_request.base.ref }}"
+                  VERSION_CLEANED="${VERSION#release/}"
+                  docker build -f .github/Dockerfile -t simeis-server:${VERSION_CLEANED} .
               shell: bash
 
             - name: 🐳 Save Docker image as archive
               run: |
-                  docker image save simeis-server:${{ github.sha }} -o simeis-server-docker-image.tar
+                  VERSION="${{ github.event.pull_request.base.ref }}"
+                  VERSION_CLEANED="${VERSION#release/}"
+                  docker image save simeis-server:${VERSION_CLEANED} -o simeis-server-docker-image.tar
               shell: bash
 
             - name: 🧪 Test Docker image
               run: |
-                  docker run -d --rm -p 8080:8080 --name simeis-server-test simeis-server:${{ github.sha }}
+                  VERSION="${{ github.event.pull_request.base.ref }}"
+                  VERSION_CLEANED="${VERSION#release/}"
+                  docker run -d --rm -p 8080:8080 --name simeis-server-test simeis-server:${VERSION_CLEANED}
                   sleep 5
                   docker ps | grep simeis-server-test
                   docker stop simeis-server-test
@@ -71,8 +77,10 @@ jobs:
 
             - name: 🐳 Tag and push Docker image to DockerHub
               run: |
-                  IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/simeis-server:${{ github.sha }}
-                  docker tag simeis-server:${{ github.sha }} $IMAGE_NAME
+                  VERSION="${{ github.event.pull_request.base.ref }}"
+                  VERSION_CLEANED="${VERSION#release/}"
+                  IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/simeis-server:${VERSION_CLEANED}
+                  docker tag simeis-server:${VERSION_CLEANED} $IMAGE_NAME
                   docker push $IMAGE_NAME
               shell: bash
 
