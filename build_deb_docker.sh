@@ -16,6 +16,6 @@ PROJECT_DIR=$(pwd)
 DOCKER_CMD='apt-get update && apt-get install -y dpkg-dev && dpkg-deb --build mypackage && chown $(id -u):$(id -g) mypackage.deb'
 
 echo "Lancement du build dans Docker..."
-docker run --rm -it -v "$PROJECT_DIR":/workspace -w /workspace $DOCKER_IMAGE bash -c "$DOCKER_CMD"
+docker run --rm -v "$PROJECT_DIR":/workspace -w /workspace $DOCKER_IMAGE bash -c "$DOCKER_CMD"
 
 echo "\nFichier .deb généré dans : $PROJECT_DIR/mypackage.deb"
