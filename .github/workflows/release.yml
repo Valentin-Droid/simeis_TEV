@@ -46,6 +46,23 @@ jobs:
                   cargo build --release --target ${{ matrix.target }}
               shell: bash
 
+            - name: 🐳 Build Docker image
+              run: |
+                  docker build -f .github/Dockerfile -t simeis-server:${{ github.sha }} .
+              shell: bash
+
+            - name: 🐳 Save Docker image as archive
+              run: |
+                  docker image save simeis-server:${{ github.sha }} -o simeis-server-docker-image.tar
+              shell: bash
+
+            - name: 📤 Upload Docker image artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: simeis-server-docker-image
+                  path: simeis-server-docker-image.tar
+                  retention-days: 1
+
             - name: 🏗️ Build Debian package (.deb)
               run: |
                   chmod +x ./build_deb_docker.sh
