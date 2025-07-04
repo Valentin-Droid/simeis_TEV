@@ -21,9 +21,10 @@ jobs:
             git-message: ${{ steps.git-info.outputs.git-message }}
         steps:
             - name: 📥 Checkout repository
-              run: |
-                  git clone ${{ github.server_url }}/${{ github.repository }} .
-                  git fetch --all
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
             - name: 🦀 Setup Rust
               run: |
@@ -85,12 +86,12 @@ jobs:
                     .
               shell: bash
 
-            - name: 📤 Store artifacts temporarily
-              run: |
-                  mkdir -p /tmp/shared-artifacts
-                  cp -r release-artifacts/* /tmp/shared-artifacts/ || true
-                  ls -la /tmp/shared-artifacts/
-              shell: bash
+            - name: 📤 Upload release artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: release-artifacts-${{ matrix.suffix }}
+                  path: release-artifacts/
+                  retention-days: 1
 
     create_or_update_release:
         if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.base.ref, 'release/')
@@ -98,15 +99,17 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - name: 📥 Checkout repository
-              run: |
-                  git clone ${{ github.server_url }}/${{ github.repository }} .
-                  git fetch --all
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: 📥 Download all artifacts
-              run: |
-                  mkdir -p ./artifacts
-                  cp -r /tmp/shared-artifacts/* ./artifacts/ || true
-                  find ./artifacts -type f -ls
+            - name: 📥 Download release artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  pattern: release-artifacts-*
+                  path: ./artifacts
+                  merge-multiple: true
 
             - name: 📦 Consolidate artifacts
               run: |
@@ -174,7 +177,7 @@ jobs:
               uses: mini-bomba/create-github-release@v1.2.0
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
-                  tag: ${{ steps.format_release_name.outputs.name_cleaned }}
+                  tag: release/${{ steps.format_release_name.outputs.name_cleaned }}
                   name: ${{ steps.format_release_name.outputs.name }}
                   body: |
                       Release triggered by @${{ github.actor }}
@@ -187,7 +190,7 @@ jobs:
 
                       - `simeis-server-linux-x64` : Binaire principal optimisé pour Linux x64
                       - `simeis-manual.pdf` : Documentation complète du projet
-                      - `simeis-source-${{ github.event.pull_request.base.ref }}.tar.gz` : Code source de la release
+                      - `simeis-source-${{ steps.format_release_name.outputs.name_cleaned }}.tar.gz` : Code source de la release
 
                       [Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
                   files: |
