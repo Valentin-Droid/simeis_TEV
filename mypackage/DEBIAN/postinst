@@ -5,8 +5,6 @@ grep -q '^simeis:' /etc/passwd || useradd --system --no-create-home --shell /usr
 
 chown simeis:simeis /usr/bin/simeis-server
 
-
-install -m 644 /usr/share/man/man1/simeis-server.1 /usr/share/man/man1/simeis-server.1
 install -m 644 /lib/systemd/system/simeis-server.service /etc/systemd/system/simeis-server.service
 
 # Recharger systemd, activer et démarrer le service
