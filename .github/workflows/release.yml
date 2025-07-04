@@ -151,19 +151,21 @@ jobs:
                       others+="- [#$pr_number]($pr_url) $pr_title\n"
                     fi
                   done < <(gh pr list --state merged --search "base:$(echo ${{ github.event.pull_request.base.ref }})" --json number,title,headRefName,url,mergedAt --jq '.[] | select(.mergedAt != null) | select(.mergedAt >= ("$(git show -s --format=%cI $base_sha)"))')
-                  # Write changelog
-                  echo "## ✨ Features" > changelog.md
-                  if [ -n "$features" ]; then echo -e "$features" >> changelog.md; else echo "_Aucune_" >> changelog.md; fi
-                  echo "\n## 🐛 Bugfix" >> changelog.md
-                  if [ -n "$bugfixes" ]; then echo -e "$bugfixes" >> changelog.md; else echo "_Aucun_" >> changelog.md; fi
-                  echo "\n## 🔄 Autre" >> changelog.md
-                  if [ -n "$others" ]; then echo -e "$others" >> changelog.md; else echo "_Aucun_" >> changelog.md; fi
-                  # Export for next step
-                  changelog_content=$(cat changelog.md)
-                  changelog_content="${changelog_content//'%'/'%25'}"
-                  changelog_content="${changelog_content//$'\n'/'%0A'}"
-                  changelog_content="${changelog_content//$'\r'/'%0D'}"
-                  echo "changelog=$changelog_content" >> "$GITHUB_OUTPUT"
+                  # Write changelog using proper EOF delimiter
+                  {
+                    echo "## ✨ Features"
+                    if [ -n "$features" ]; then echo -e "$features"; else echo "_Aucune_"; fi
+                    echo ""
+                    echo "## 🐛 Bugfix"
+                    if [ -n "$bugfixes" ]; then echo -e "$bugfixes"; else echo "_Aucun_"; fi
+                    echo ""
+                    echo "## 🔄 Autre"
+                    if [ -n "$others" ]; then echo -e "$others"; else echo "_Aucun_"; fi
+                  } > changelog.md
+                  # Export for next step using EOF delimiter
+                  echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
+                  cat changelog.md >> "$GITHUB_OUTPUT"
+                  echo "EOF" >> "$GITHUB_OUTPUT"
 
             - name: Format release name
               id: format_release_name
