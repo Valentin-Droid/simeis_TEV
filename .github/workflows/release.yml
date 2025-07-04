@@ -72,7 +72,10 @@ jobs:
               run: |
                   mkdir release-artifacts
                   cp target/${{ matrix.target }}/release/simeis-server${{ matrix.extension }} release-artifacts/simeis-server-${{ matrix.suffix }}${{ matrix.extension }}
-                  if [ -f mypackage.deb ]; then cp mypackage.deb release-artifacts/; fi
+                  VERSION="${{ github.event.pull_request.base.ref }}"
+                  VERSION_CLEANED="${VERSION#release/}"
+                  if [ -f mypackage.deb ]; then cp mypackage.deb release-artifacts/simeis-server-${VERSION_CLEANED}.deb; fi
+                  ls -lh release-artifacts
               shell: bash
 
             - name: 📦 Prepare documentation
