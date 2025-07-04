@@ -5,4 +5,4 @@ COPY target/x86_64-unknown-linux-gnu/release/simeis-server /usr/local/bin/simeis
 
 EXPOSE 8080
 
-CMD ["/usr/local/bin/simeis-server"]
+ENTRYPOINT ["/usr/local/bin/simeis-server"]
