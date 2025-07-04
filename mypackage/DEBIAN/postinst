@@ -1,16 +1,12 @@
 #!/bin/sh
 set -e
 
-# Créer l'utilisateur système simeis s'il n'existe pas
 grep -q '^simeis:' /etc/passwd || useradd --system --no-create-home --shell /usr/sbin/nologin simeis
 
-# Installer le binaire
 chown simeis:simeis /usr/bin/simeis-server
 
-# Installer la page de manuel
-install -m 644 /usr/share/man/man1/simeis-server.1 /usr/share/man/man1/simeis-server.1
 
-# Installer le fichier systemd
+install -m 644 /usr/share/man/man1/simeis-server.1 /usr/share/man/man1/simeis-server.1
 install -m 644 /lib/systemd/system/simeis-server.service /etc/systemd/system/simeis-server.service
 
 # Recharger systemd, activer et démarrer le service
