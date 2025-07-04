@@ -71,7 +71,9 @@ jobs:
 
             - name: 🐳 Tag and push Docker image to DockerHub
               run: |
-                  IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/simeis-server:${{ github.sha }}
+                  VERSION="${{ github.event.pull_request.base.ref }}"
+                  VERSION_CLEANED="${VERSION#release/}"
+                  IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/simeis-server:${VERSION_CLEANED}
                   docker tag simeis-server:${{ github.sha }} $IMAGE_NAME
                   docker push $IMAGE_NAME
               shell: bash
