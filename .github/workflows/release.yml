@@ -179,7 +179,7 @@ jobs:
               uses: mini-bomba/create-github-release@v1.2.0
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}
-                  tag: release/${{ steps.format_release_name.outputs.name_cleaned }}
+                  tag: ${{ steps.format_release_name.outputs.name_cleaned }}
                   name: ${{ steps.format_release_name.outputs.name }}
                   body: |
                       Release triggered by @${{ github.actor }}
