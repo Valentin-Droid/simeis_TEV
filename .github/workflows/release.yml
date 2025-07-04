@@ -56,12 +56,11 @@ jobs:
                   docker image save simeis-server:${{ github.sha }} -o simeis-server-docker-image.tar
               shell: bash
 
-            - name: 🧪 Test Docker image (basic healthcheck)
+            - name: 🧪 Test Docker image
               run: |
                   docker run -d --rm -p 8080:8080 --name simeis-server-test simeis-server:${{ github.sha }}
                   sleep 5
                   docker ps | grep simeis-server-test
-                  # Optionally, add a curl or wget healthcheck here if the service exposes an endpoint
                   docker stop simeis-server-test
               shell: bash
 
@@ -243,4 +242,5 @@ jobs:
                       [Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
                   files: |
                       release-artifacts/*
+                      simeis-server-docker-image.tar
                   clear_attachments: true
