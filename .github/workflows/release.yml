@@ -46,6 +46,44 @@ jobs:
                   cargo build --release --target ${{ matrix.target }}
               shell: bash
 
+            - name: 🐳 Build Docker image
+              run: |
+                  docker build -f .github/Dockerfile -t simeis-server:${{ github.sha }} .
+              shell: bash
+
+            - name: 🐳 Save Docker image as archive
+              run: |
+                  docker image save simeis-server:${{ github.sha }} -o simeis-server-docker-image.tar
+              shell: bash
+
+            - name: 🧪 Test Docker image (basic healthcheck)
+              run: |
+                  docker run -d --rm -p 8080:8080 --name simeis-server-test simeis-server:${{ github.sha }}
+                  sleep 5
+                  docker ps | grep simeis-server-test
+                  # Optionally, add a curl or wget healthcheck here if the service exposes an endpoint
+                  docker stop simeis-server-test
+              shell: bash
+
+            - name: 🐳 Login to DockerHub
+              run: |
+                  echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+              shell: bash
+
+            - name: 🐳 Tag and push Docker image to DockerHub
+              run: |
+                  IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/simeis-server:${{ github.sha }}
+                  docker tag simeis-server:${{ github.sha }} $IMAGE_NAME
+                  docker push $IMAGE_NAME
+              shell: bash
+
+            - name: 📤 Upload Docker image artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: simeis-server-docker-image
+                  path: simeis-server-docker-image.tar
+                  retention-days: 1
+
             - name: 🏗️ Build Debian package (.deb)
               run: |
                   chmod +x ./build_deb_docker.sh
