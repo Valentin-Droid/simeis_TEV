@@ -35,11 +35,6 @@ jobs:
                   rustup target add ${{ matrix.target }}
               shell: bash
 
-            - name: 📦 Prepare Rust environment
-              run: |
-                  # Pas de cache, on laisse Cargo gérer ses dépendances
-              shell: bash
-
             - name: 🔧 Install Typst for documentation
               run: |
                   curl -fsSL https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ
@@ -49,6 +44,12 @@ jobs:
             - name: 🏗️ Build release binary
               run: |
                   cargo build --release --target ${{ matrix.target }}
+              shell: bash
+
+            - name: 🏗️ Build Debian package (.deb)
+              run: |
+                  chmod +x ./build_deb_docker.sh
+                  ./build_deb_docker.sh
               shell: bash
 
             - name: 📋 Set up Git info for release
@@ -71,6 +72,7 @@ jobs:
               run: |
                   mkdir release-artifacts
                   cp target/${{ matrix.target }}/release/simeis-server${{ matrix.extension }} release-artifacts/simeis-server-${{ matrix.suffix }}${{ matrix.extension }}
+                  if [ -f mypackage.deb ]; then cp mypackage.deb release-artifacts/; fi
               shell: bash
 
             - name: 📦 Prepare documentation
@@ -193,6 +195,8 @@ jobs:
                       - `simeis-server-linux-x64` : Binaire principal optimisé pour Linux x64
                       - `simeis-manual.pdf` : Documentation complète du projet
                       - `simeis-source-${{ steps.format_release_name.outputs.name_cleaned }}.tar.gz` : Code source de la release
+
+                      - `mypackage.deb` : Paquet Debian généré automatiquement (installable avec `sudo apt install ./mypackage.deb`)
 
                       [Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
                   files: |

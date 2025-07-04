@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+grep -q '^simeis:' /etc/passwd || useradd --system --no-create-home --shell /usr/sbin/nologin simeis
+
+chown simeis:simeis /usr/bin/simeis-server
+
+install -m 644 /lib/systemd/system/simeis-server.service /etc/systemd/system/simeis-server.service
+
+# Recharger systemd, activer et démarrer le service
+systemctl daemon-reload
+systemctl enable simeis-server.service
+systemctl start simeis-server.service
