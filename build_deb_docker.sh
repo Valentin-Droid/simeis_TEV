@@ -12,10 +12,13 @@ fi
 DOCKER_IMAGE=debian:bookworm
 PROJECT_DIR=$(pwd)
 
+# Utilisation : ./build_deb_docker.sh <nom_du_package.deb>
+PACKAGE_NAME=${1:-mypackage.deb}
+
 # Commande à exécuter dans le conteneur
-DOCKER_CMD='apt-get update && apt-get install -y dpkg-dev && dpkg-deb --build mypackage && chown $(id -u):$(id -g) mypackage.deb'
+DOCKER_CMD="apt-get update && apt-get install -y dpkg-dev && dpkg-deb --build mypackage '$PACKAGE_NAME' && chown \\$(id -u):\\$(id -g) '$PACKAGE_NAME'"
 
 echo "Lancement du build dans Docker..."
 docker run --rm -v "$PROJECT_DIR":/workspace -w /workspace $DOCKER_IMAGE bash -c "$DOCKER_CMD"
 
-echo "\nFichier .deb généré dans : $PROJECT_DIR/mypackage.deb"
+echo "\nFichier .deb généré dans : $PROJECT_DIR/$PACKAGE_NAME"

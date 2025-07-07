@@ -1,255 +1,257 @@
 name: Release Automation
 
 on:
-    pull_request:
-        types: [closed]
+  pull_request:
+    types: [closed]
 
 jobs:
-    build-release:
-        if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.base.ref, 'release/')
-        strategy:
-            matrix:
-                os: [ubuntu-latest]
-                include:
-                    - os: ubuntu-latest
-                      target: x86_64-unknown-linux-gnu
-                      suffix: linux-x64
-                      extension: ''
-        runs-on: ubuntu-latest
-        outputs:
-            git-hash: ${{ steps.git-info.outputs.git-hash }}
-            git-message: ${{ steps.git-info.outputs.git-message }}
-        steps:
-            - name: 📥 Checkout repository
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-                  token: ${{ secrets.GITHUB_TOKEN }}
+  build-release:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.base.ref, 'release/')
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            suffix: linux-x64
+            extension: ""
+    runs-on: ubuntu-latest
+    outputs:
+      git-hash: ${{ steps.git-info.outputs.git-hash }}
+      git-message: ${{ steps.git-info.outputs.git-message }}
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: 🦀 Setup Rust
-              run: |
-                  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-                  if [ "$RUNNER_OS" != "Windows" ]; then
-                    source ~/.cargo/env
-                  fi
-                  rustup target add ${{ matrix.target }}
-              shell: bash
+      - name: 🦀 Setup Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          if [ "$RUNNER_OS" != "Windows" ]; then
+            source ~/.cargo/env
+          fi
+          rustup target add ${{ matrix.target }}
+        shell: bash
 
-            - name: 🔧 Install Typst for documentation
-              run: |
-                  curl -fsSL https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ
-                  sudo mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
-              shell: bash
+      - name: 🔧 Install Typst for documentation
+        run: |
+          curl -fsSL https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz | tar -xJ
+          sudo mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
+        shell: bash
 
-            - name: 🏗️ Build release binary
-              run: |
-                  cargo build --release --target ${{ matrix.target }}
-              shell: bash
+      - name: 🏗️ Build release binary
+        run: |
+          cargo build --release --target ${{ matrix.target }}
+        shell: bash
 
-            - name: 🐳 Build Docker image
-              run: |
-                  VERSION="${{ github.event.pull_request.base.ref }}"
-                  VERSION_CLEANED="${VERSION#release/}"
-                  docker build -f .github/Dockerfile -t simeis-server:${VERSION_CLEANED} .
-              shell: bash
+      - name: 🐳 Build Docker image
+        run: |
+          VERSION="${{ github.event.pull_request.base.ref }}"
+          VERSION_CLEANED="${VERSION#release/}"
+          docker build -f .github/Dockerfile -t simeis-server:${VERSION_CLEANED} .
+        shell: bash
 
-            - name: 🐳 Save Docker image as archive
-              run: |
-                  VERSION="${{ github.event.pull_request.base.ref }}"
-                  VERSION_CLEANED="${VERSION#release/}"
-                  docker image save simeis-server:${VERSION_CLEANED} -o simeis-server-docker-image.tar
-              shell: bash
+      - name: 🐳 Save Docker image as archive
+        run: |
+          VERSION="${{ github.event.pull_request.base.ref }}"
+          VERSION_CLEANED="${VERSION#release/}"
+          docker image save simeis-server:${VERSION_CLEANED} -o simeis-server-docker-image.tar
+        shell: bash
 
-            - name: 🧪 Test Docker image
-              run: |
-                  VERSION="${{ github.event.pull_request.base.ref }}"
-                  VERSION_CLEANED="${VERSION#release/}"
-                  docker run -d --rm -p 8080:8080 --name simeis-server-test simeis-server:${VERSION_CLEANED}
-                  sleep 5
-                  docker ps | grep simeis-server-test
-                  docker stop simeis-server-test
-              shell: bash
+      - name: 🧪 Test Docker image
+        run: |
+          VERSION="${{ github.event.pull_request.base.ref }}"
+          VERSION_CLEANED="${VERSION#release/}"
+          docker run -d --rm -p 8080:8080 --name simeis-server-test simeis-server:${VERSION_CLEANED}
+          sleep 5
+          docker ps | grep simeis-server-test
+          docker stop simeis-server-test
+        shell: bash
 
-            - name: 🐳 Login to DockerHub
-              run: |
-                  echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
-              shell: bash
+      - name: 🐳 Login to DockerHub
+        run: |
+          echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+        shell: bash
 
-            - name: 🐳 Tag and push Docker image to DockerHub
-              run: |
-                  VERSION="${{ github.event.pull_request.base.ref }}"
-                  VERSION_CLEANED="${VERSION#release/}"
-                  IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/simeis-server:${VERSION_CLEANED}
-                  docker tag simeis-server:${VERSION_CLEANED} $IMAGE_NAME
-                  docker push $IMAGE_NAME
-              shell: bash
+      - name: 🐳 Tag and push Docker image to DockerHub
+        run: |
+          VERSION="${{ github.event.pull_request.base.ref }}"
+          VERSION_CLEANED="${VERSION#release/}"
+          IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/simeis-server:${VERSION_CLEANED}
+          docker tag simeis-server:${VERSION_CLEANED} $IMAGE_NAME
+          docker push $IMAGE_NAME
+        shell: bash
 
-            - name: 📤 Upload Docker image artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: simeis-server-docker-image
-                  path: simeis-server-docker-image.tar
-                  retention-days: 1
+      - name: 📤 Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: simeis-server-docker-image
+          path: simeis-server-docker-image.tar
+          retention-days: 1
 
-            - name: 🏗️ Build Debian package (.deb)
-              run: |
-                  chmod +x ./build_deb_docker.sh
-                  ./build_deb_docker.sh
-              shell: bash
+      - name: 🏗️ Build Debian package (.deb)
+        run: |
+          VERSION="${{ github.event.pull_request.base.ref }}"
+          VERSION_CLEANED="${VERSION#release/}"
+          chmod +x ./build_deb_docker.sh
+          ./build_deb_docker.sh "TEV_${VERSION_CLEANED}.deb"
+        shell: bash
 
-            - name: 📋 Set up Git info for release
-              id: git-info
-              run: |
-                  gitHash=$(git rev-parse --short=8 HEAD)
-                  gitMessage=$(git log -1 --pretty=%B)
-                  echo "git-hash=$gitHash" >> "$GITHUB_OUTPUT"
-                  echo "git-message<<EOF" >> "$GITHUB_OUTPUT"
-                  echo "$gitMessage" >> "$GITHUB_OUTPUT"
-                  echo "EOF" >> "$GITHUB_OUTPUT"
-              shell: bash
+      - name: 📋 Set up Git info for release
+        id: git-info
+        run: |
+          gitHash=$(git rev-parse --short=8 HEAD)
+          gitMessage=$(git log -1 --pretty=%B)
+          echo "git-hash=$gitHash" >> "$GITHUB_OUTPUT"
+          echo "git-message<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$gitMessage" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+        shell: bash
 
-            - name: 📖 Generate documentation
-              run: |
-                  typst compile doc/manual.typ doc/manual.pdf
-              shell: bash
+      - name: 📖 Generate documentation
+        run: |
+          typst compile doc/manual.typ doc/manual.pdf
+        shell: bash
 
-            - name: Prepare release artifacts
-              run: |
-                  mkdir release-artifacts
-                  cp target/${{ matrix.target }}/release/simeis-server${{ matrix.extension }} release-artifacts/simeis-server-${{ matrix.suffix }}${{ matrix.extension }}
-                  VERSION="${{ github.event.pull_request.base.ref }}"
-                  VERSION_CLEANED="${VERSION#release/}"
-                  if [ -f mypackage.deb ]; then cp mypackage.deb release-artifacts/simeis-server-${VERSION_CLEANED}.deb; fi
-                  ls -lh release-artifacts
-              shell: bash
+      - name: Prepare release artifacts
+        run: |
+          mkdir release-artifacts
+          cp target/${{ matrix.target }}/release/simeis-server${{ matrix.extension }} release-artifacts/simeis-server-${{ matrix.suffix }}${{ matrix.extension }}
+          VERSION="${{ github.event.pull_request.base.ref }}"
+          VERSION_CLEANED="${VERSION#release/}"
+          if [ -f TEV_${VERSION_CLEANED}.deb ]; then cp TEV_${VERSION_CLEANED}.deb release-artifacts/TEV_${VERSION_CLEANED}.deb; fi
+          ls -lh release-artifacts
+        shell: bash
 
-            - name: 📦 Prepare documentation
-              run: |
-                  mkdir -p release-artifacts
-                  cp doc/manual.pdf release-artifacts/simeis-manual.pdf
-                  VERSION="${{ github.event.pull_request.base.ref }}"
-                  VERSION_CLEANED="${VERSION#release/}"
-                  tar -czf release-artifacts/simeis-source-${VERSION_CLEANED}.tar.gz \
-                    --exclude=target \
-                    --exclude=.git \
-                    --exclude=build \
-                    --exclude=release-artifacts \
-                    .
-              shell: bash
+      - name: 📦 Prepare documentation
+        run: |
+          mkdir -p release-artifacts
+          cp doc/manual.pdf release-artifacts/simeis-manual.pdf
+          VERSION="${{ github.event.pull_request.base.ref }}"
+          VERSION_CLEANED="${VERSION#release/}"
+          tar -czf release-artifacts/simeis-source-${VERSION_CLEANED}.tar.gz \
+            --exclude=target \
+            --exclude=.git \
+            --exclude=build \
+            --exclude=release-artifacts \
+            .
+        shell: bash
 
-            - name: 📤 Upload release artifacts
-              uses: actions/upload-artifact@v4
-              with:
-                  name: release-artifacts-${{ matrix.suffix }}
-                  path: release-artifacts/
-                  retention-days: 1
+      - name: 📤 Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts-${{ matrix.suffix }}
+          path: release-artifacts/
+          retention-days: 1
 
-    create_or_update_release:
-        if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.base.ref, 'release/')
-        needs: build-release
-        runs-on: ubuntu-latest
-        steps:
-            - name: 📥 Checkout repository
-              uses: actions/checkout@v4
-              with:
-                  fetch-depth: 0
-                  token: ${{ secrets.GITHUB_TOKEN }}
+  create_or_update_release:
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.base.ref, 'release/')
+    needs: build-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: 📥 Download release artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  pattern: release-artifacts-*
-                  path: ./artifacts
-                  merge-multiple: true
+      - name: 📥 Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-artifacts-*
+          path: ./artifacts
+          merge-multiple: true
 
-            - name: 📦 Consolidate artifacts
-              run: |
-                  mkdir -p release-artifacts
-                  find ./artifacts -name "simeis-server-*" -type f -exec cp {} release-artifacts/ \;
-                  find ./artifacts -name "simeis-manual.pdf" -type f -exec cp {} release-artifacts/ \;
-                  find ./artifacts -name "simeis-source-*.tar.gz" -type f -exec cp {} release-artifacts/ \;
-                  if [ -f ./artifacts/simeis-server-docker-image.tar ]; then cp ./artifacts/simeis-server-docker-image.tar release-artifacts/; fi
-                  ls -la release-artifacts/
+      - name: 📦 Consolidate artifacts
+        run: |
+          mkdir -p release-artifacts
+          find ./artifacts -name "simeis-server-*" -type f -exec cp {} release-artifacts/ \;
+          find ./artifacts -name "simeis-manual.pdf" -type f -exec cp {} release-artifacts/ \;
+          find ./artifacts -name "simeis-source-*.tar.gz" -type f -exec cp {} release-artifacts/ \;
+          if [ -f ./artifacts/simeis-server-docker-image.tar ]; then cp ./artifacts/simeis-server-docker-image.tar release-artifacts/; fi
+          ls -la release-artifacts/
 
-            - name: 📝 Generate changelog from merged PRs
-              id: changelog
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  # Get the latest release tag (if any)
-                  latest_tag=$(git tag --sort=-creatordate | grep '^release/' | head -n1)
-                  if [ -z "$latest_tag" ]; then
-                    base_sha=$(git rev-list --max-parents=0 HEAD)
-                  else
-                    base_sha=$(git rev-list -n 1 "$latest_tag")
-                  fi
-                  head_sha=$(git rev-parse HEAD)
-                  # Get merged PRs between base_sha and head_sha
-                  prs=$(gh pr list --state merged --search "base:$(echo ${{ github.event.pull_request.base.ref }})" --json number,title,headRefName,url,mergedAt --jq '.[] | select(.mergedAt != null) | select(.mergedAt >= ("$(git show -s --format=%cI $base_sha)"))')
-                  # Classify PRs
-                  features=""
-                  bugfixes=""
-                  others=""
-                  while read -r pr; do
-                    pr_number=$(echo "$pr" | jq -r '.number')
-                    pr_title=$(echo "$pr" | jq -r '.title')
-                    pr_head=$(echo "$pr" | jq -r '.headRefName')
-                    pr_url=$(echo "$pr" | jq -r '.url')
-                    if [[ "$pr_head" =~ ^feature/ ]]; then
-                      features+="- [#$pr_number]($pr_url) $pr_title\n"
-                    elif [[ "$pr_head" =~ ^bug/ ]]; then
-                      bugfixes+="- [#$pr_number]($pr_url) $pr_title\n"
-                    else
-                      others+="- [#$pr_number]($pr_url) $pr_title\n"
-                    fi
-                  done < <(gh pr list --state merged --search "base:$(echo ${{ github.event.pull_request.base.ref }})" --json number,title,headRefName,url,mergedAt --jq '.[] | select(.mergedAt != null) | select(.mergedAt >= ("$(git show -s --format=%cI $base_sha)"))')
-                  # Write changelog using proper EOF delimiter
-                  {
-                    echo "## ✨ Features"
-                    if [ -n "$features" ]; then echo -e "$features"; else echo "_Aucune_"; fi
-                    echo ""
-                    echo "## 🐛 Bugfix"
-                    if [ -n "$bugfixes" ]; then echo -e "$bugfixes"; else echo "_Aucun_"; fi
-                    echo ""
-                    echo "## 🔄 Autre"
-                    if [ -n "$others" ]; then echo -e "$others"; else echo "_Aucun_"; fi
-                  } > changelog.md
-                  # Export for next step using EOF delimiter
-                  echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
-                  cat changelog.md >> "$GITHUB_OUTPUT"
-                  echo "EOF" >> "$GITHUB_OUTPUT"
+      - name: 📝 Generate changelog from merged PRs
+        id: changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get the latest release tag (if any)
+          latest_tag=$(git tag --sort=-creatordate | grep '^release/' | head -n1)
+          if [ -z "$latest_tag" ]; then
+            base_sha=$(git rev-list --max-parents=0 HEAD)
+          else
+            base_sha=$(git rev-list -n 1 "$latest_tag")
+          fi
+          head_sha=$(git rev-parse HEAD)
+          # Get merged PRs between base_sha and head_sha
+          prs=$(gh pr list --state merged --search "base:$(echo ${{ github.event.pull_request.base.ref }})" --json number,title,headRefName,url,mergedAt --jq '.[] | select(.mergedAt != null) | select(.mergedAt >= ("$(git show -s --format=%cI $base_sha)"))')
+          # Classify PRs
+          features=""
+          bugfixes=""
+          others=""
+          while read -r pr; do
+            pr_number=$(echo "$pr" | jq -r '.number')
+            pr_title=$(echo "$pr" | jq -r '.title')
+            pr_head=$(echo "$pr" | jq -r '.headRefName')
+            pr_url=$(echo "$pr" | jq -r '.url')
+            if [[ "$pr_head" =~ ^feature/ ]]; then
+              features+="- [#$pr_number]($pr_url) $pr_title\n"
+            elif [[ "$pr_head" =~ ^bug/ ]]; then
+              bugfixes+="- [#$pr_number]($pr_url) $pr_title\n"
+            else
+              others+="- [#$pr_number]($pr_url) $pr_title\n"
+            fi
+          done < <(gh pr list --state merged --search "base:$(echo ${{ github.event.pull_request.base.ref }})" --json number,title,headRefName,url,mergedAt --jq '.[] | select(.mergedAt != null) | select(.mergedAt >= ("$(git show -s --format=%cI $base_sha)"))')
+          # Write changelog using proper EOF delimiter
+          {
+            echo "## ✨ Features"
+            if [ -n "$features" ]; then echo -e "$features"; else echo "_Aucune_"; fi
+            echo ""
+            echo "## 🐛 Bugfix"
+            if [ -n "$bugfixes" ]; then echo -e "$bugfixes"; else echo "_Aucun_"; fi
+            echo ""
+            echo "## 🔄 Autre"
+            if [ -n "$others" ]; then echo -e "$others"; else echo "_Aucun_"; fi
+          } > changelog.md
+          # Export for next step using EOF delimiter
+          echo "changelog<<EOF" >> "$GITHUB_OUTPUT"
+          cat changelog.md >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
 
-            - name: Format release name
-              id: format_release_name
-              run: |
-                  NAME="${{ github.event.pull_request.base.ref }}"
-                  NAME_CLEANED="${NAME#release/}"
-                  echo "name=Release $NAME_CLEANED" >> "$GITHUB_OUTPUT"
-                  echo "name_cleaned=$NAME_CLEANED" >> "$GITHUB_OUTPUT"
+      - name: Format release name
+        id: format_release_name
+        run: |
+          NAME="${{ github.event.pull_request.base.ref }}"
+          NAME_CLEANED="${NAME#release/}"
+          echo "name=Release $NAME_CLEANED" >> "$GITHUB_OUTPUT"
+          echo "name_cleaned=$NAME_CLEANED" >> "$GITHUB_OUTPUT"
 
-            - name: Create or update GitHub Release
-              uses: mini-bomba/create-github-release@v1.2.0
-              with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
-                  tag: ${{ steps.format_release_name.outputs.name_cleaned }}
-                  name: ${{ steps.format_release_name.outputs.name }}
-                  body: |
-                      Release triggered by @${{ github.actor }}
-                      Commit: ${{ needs.build-release.outputs.git-hash }}
-                      Message:
-                      ${{ needs.build-release.outputs.git-message }}
+      - name: Create or update GitHub Release
+        uses: mini-bomba/create-github-release@v1.2.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.format_release_name.outputs.name_cleaned }}
+          name: ${{ steps.format_release_name.outputs.name }}
+          body: |
+            Release triggered by @${{ github.actor }}
+            Commit: ${{ needs.build-release.outputs.git-hash }}
+            Message:
+            ${{ needs.build-release.outputs.git-message }}
 
-                      ### Changelog
-                      ${{ steps.changelog.outputs.changelog }}
+            ### Changelog
+            ${{ steps.changelog.outputs.changelog }}
 
-                      - `simeis-server-linux-x64` : Binaire principal optimisé pour Linux x64
-                      - `simeis-manual.pdf` : Documentation complète du projet
-                      - `simeis-source-${{ steps.format_release_name.outputs.name_cleaned }}.tar.gz` : Code source de la release
+            - `simeis-server-linux-x64` : Binaire principal optimisé pour Linux x64
+            - `simeis-manual.pdf` : Documentation complète du projet
+            - `simeis-source-${{ steps.format_release_name.outputs.name_cleaned }}.tar.gz` : Code source de la release
 
-                      - `mypackage.deb` : Paquet Debian généré automatiquement (installable avec `sudo apt install ./mypackage.deb`)
+            - `TEV_${{ steps.format_release_name.outputs.name_cleaned }}.deb` : Paquet Debian généré automatiquement (installable avec `sudo apt install ./TEV_${{ steps.format_release_name.outputs.name_cleaned }}.deb`)
 
-                      [Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-                  files: |
-                      release-artifacts/*
-                      simeis-server-docker-image.tar
-                  clear_attachments: true
+            [Workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          files: |
+            release-artifacts/*
+            simeis-server-docker-image.tar
+          clear_attachments: true
