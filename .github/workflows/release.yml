@@ -110,7 +110,6 @@ jobs:
                   echo "Description: Tev Simeis Server Debian Package" >> mypackage/DEBIAN/control
                   mkdir -p mypackage/usr/bin
                   cp target/${{ matrix.target }}/release/simeis-server mypackage/usr/bin/tev-simeis
-                  cp target/${{ matrix.target }}/release/systemd mypackage/usr/bin/tev-systemd
                   dpkg-deb --build mypackage "TEV_${VERSION_CLEANED}.deb"
               shell: bash
 
