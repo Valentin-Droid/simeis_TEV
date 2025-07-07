@@ -136,7 +136,7 @@ jobs:
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
                   VERSION_CLEANED="${VERSION_CLEANED#V}"
-                  if [ -f TEV_${VERSION_CLEANED}.deb ]; then cp TEV_${VERSION_CLEANED}.deb release-artifacts/TEV_${VERSION_CLEANED}.deb; fi
+                  if [ -f "TEV_${VERSION_CLEANED}.deb" ]; then cp "TEV_${VERSION_CLEANED}.deb" release-artifacts/TEV_${VERSION_CLEANED}.deb; fi
                   ls -lh release-artifacts
               shell: bash
 
