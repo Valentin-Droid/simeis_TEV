@@ -1,3 +1,9 @@
+use std::env;
+#[web::get("/version")]
+async fn version() -> impl web::Responder {
+    let version = env!("CARGO_PKG_VERSION");
+    build_response(Ok(json!({"version": version})))
+}
 use std::collections::BTreeMap;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
@@ -908,6 +914,7 @@ pub fn configure(srv: &mut ServiceConfig) {
     srv.service(tick_server);
 
     srv.service(ping)
+        .service(version)
         .service(gamestats)
         .service(resources_info)
         .service(get_syslogs)
