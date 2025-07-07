@@ -97,6 +97,8 @@ jobs:
           VERSION_CLEANED="${VERSION#release/}"
           chmod +x ./build_deb_docker.sh
           ./build_deb_docker.sh "TEV_${VERSION_CLEANED}.deb"
+          echo "\n[DEBUG] Listing .deb after build:"
+          ls -lh *.deb || true
         shell: bash
 
       - name: 📋 Set up Git info for release
@@ -121,7 +123,10 @@ jobs:
           cp target/${{ matrix.target }}/release/simeis-server${{ matrix.extension }} release-artifacts/simeis-server-${{ matrix.suffix }}${{ matrix.extension }}
           VERSION="${{ github.event.pull_request.base.ref }}"
           VERSION_CLEANED="${VERSION#release/}"
+          echo "[DEBUG] Listing .deb before copy:"
+          ls -lh TEV_*.deb || true
           if [ -f TEV_${VERSION_CLEANED}.deb ]; then cp TEV_${VERSION_CLEANED}.deb release-artifacts/TEV_${VERSION_CLEANED}.deb; fi
+          echo "[DEBUG] Listing release-artifacts after copy:"
           ls -lh release-artifacts
         shell: bash
 
