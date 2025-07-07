@@ -109,7 +109,8 @@ jobs:
                   echo "Maintainer: Valentin-Droid <valentin@example.com>" >> mypackage/DEBIAN/control
                   echo "Description: Tev Simeis Server Debian Package" >> mypackage/DEBIAN/control
                   mkdir -p mypackage/usr/bin
-                  cp target/${{ matrix.target }}/release/simeis-server mypackage/usr/bin/tev-simeis-server-${VERSION_CLEANED}
+                  cp target/${{ matrix.target }}/release/simeis-server mypackage/usr/bin/tev-simeis
+                  cp target/${{ matrix.target }}/release/systemd mypackage/usr/bin/tev-systemd
                   dpkg-deb --build mypackage "TEV_${VERSION_CLEANED}.deb"
               shell: bash
 
