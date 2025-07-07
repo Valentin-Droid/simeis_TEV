@@ -169,9 +169,17 @@ jobs:
           path: ./artifacts
           merge-multiple: true
 
-      - name: 📦 Consolidate artifacts
+      - name: 📦 Extract release artifacts
         run: |
           mkdir -p release-artifacts
+          for zip in ./artifacts/release-artifacts-*.zip; do
+            unzip -o "$zip" -d ./release-artifacts
+          done
+          ls -la release-artifacts/
+
+      - name: 📦 Consolidate artifacts (legacy)
+        run: |
+          # Conserve l'ancien comportement pour les artefacts individuels
           find ./artifacts -name "simeis-server-*" -type f -exec cp {} release-artifacts/ \;
           find ./artifacts -name "simeis-manual.pdf" -type f -exec cp {} release-artifacts/ \;
           find ./artifacts -name "simeis-source-*.tar.gz" -type f -exec cp {} release-artifacts/ \;
