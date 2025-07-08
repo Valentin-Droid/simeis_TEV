@@ -293,3 +293,57 @@ jobs:
                       release-artifacts/*
                       simeis-server-docker-image.tar
                   clear_attachments: true
+
+    deploy-to-vps:
+        name: 🚀 Deploy to VPS
+        needs: create_or_update_release
+        runs-on: ubuntu-latest
+        if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.base.ref, 'release/')
+        steps:
+            - name: 📥 Download release artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  pattern: release-artifacts-*
+                  path: ./artifacts
+                  merge-multiple: true
+
+            - name: 🗝️ Setup SSH key
+              run: |
+                  mkdir -p ~/.ssh
+                  echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+                  chmod 600 ~/.ssh/id_rsa
+                  ssh-keyscan -H ${{ vars.VPS_IP }} >> ~/.ssh/known_hosts
+              shell: bash
+
+            - name: 📦 Copy .deb to VPS
+              run: |
+                  VERSION="${{ github.event.pull_request.base.ref }}"
+                  VERSION_CLEANED="${VERSION#release/}"
+                  scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ./artifacts/TEV_${VERSION_CLEANED}.deb ${{ vars.VPS_USER }}@${{ vars.VPS_IP }}:/home/student/TEV/TEV_${VERSION_CLEANED}.deb
+              shell: bash
+
+            - name: 🛠️ Install .deb and restart service on VPS
+              run: |
+                  VERSION="${{ github.event.pull_request.base.ref }}"
+                  VERSION_CLEANED="${VERSION#release/}"
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "cd /home/student/TEV && sudo dpkg -i TEV_${VERSION_CLEANED}.deb && sudo systemctl restart simeis.service.tev"
+              shell: bash
+
+            - name: 🧪 Test /version endpoint
+              run: |
+                  VERSION="${{ github.event.pull_request.base.ref }}"
+                  VERSION_CLEANED="${VERSION#release/}"
+                  set -e
+                  # Test HTTP connectivity and version
+                  RESPONSE=$(curl -s --max-time 10 http://${{ vars.VPS_IP }}:6667/version || true)
+                  echo "Response: $RESPONSE"
+                  if [ -z "$RESPONSE" ]; then
+                    echo "❌ No response from server" >&2
+                    exit 1
+                  fi
+                  if ! echo "$RESPONSE" | grep -q "$VERSION_CLEANED"; then
+                    echo "❌ Version mismatch: expected $VERSION_CLEANED, got $RESPONSE" >&2
+                    exit 1
+                  fi
+                  echo "✅ Version OK: $RESPONSE"
+              shell: bash
