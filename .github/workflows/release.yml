@@ -110,7 +110,21 @@ jobs:
                   echo "Description: Tev Simeis Server Debian Package" >> mypackage/DEBIAN/control
                   mkdir -p mypackage/usr/bin
                   cp target/${{ matrix.target }}/release/simeis-server mypackage/usr/bin/tev-simeis
-                  cp target/${{ matrix.target }}/release/systemd mypackage/usr/bin/tev-systemd
+                  mkdir -p mypackage/usr/lib/systemd/system
+                  printf '%s\n' "[Unit]" \
+                    "Description=Service Simeis Server TEV" \
+                    "After=network.target" \
+                    "" \
+                    "[Service]" \
+                    "Type=simple" \
+                    "ExecStart=/usr/bin/tev-simeis" \
+                    "Restart=on-failure" \
+                    "User=nobody" \
+                    "Group=tev" \
+                    "" \
+                    "[Install]" \
+                    "WantedBy=multi-user.target" \
+                    > mypackage/usr/lib/systemd/system/simeis.service.tev
                   dpkg-deb --build mypackage "TEV_${VERSION_CLEANED}.deb"
               shell: bash
 
