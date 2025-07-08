@@ -106,21 +106,48 @@ jobs:
                   echo "Description: Tev Simeis Server Debian Package" >> mypackage/DEBIAN/control
                   mkdir -p mypackage/usr/bin
                   cp target/${{ matrix.target }}/release/simeis-server mypackage/usr/bin/tev-simeis
+                  chmod +x mypackage/usr/bin/tev-simeis
                   mkdir -p mypackage/usr/lib/systemd/system
                   printf '%s\n' "[Unit]" \
-                    "Description=Service Simeis Server TEV" \
+                    "Description=Simeis Server TEV Game" \
                     "After=network.target" \
+                    "Wants=network.target" \
                     "" \
                     "[Service]" \
                     "Type=simple" \
                     "ExecStart=/usr/bin/tev-simeis" \
-                    "Restart=on-failure" \
+                    "Restart=always" \
+                    "RestartSec=5" \
                     "User=nobody" \
-                    "Group=tev" \
+                    "Group=nogroup" \
+                    "Environment=RUST_LOG=info" \
+                    "StandardOutput=journal" \
+                    "StandardError=journal" \
+                    "SyslogIdentifier=simeis-tev" \
                     "" \
                     "[Install]" \
                     "WantedBy=multi-user.target" \
                     > mypackage/usr/lib/systemd/system/simeis-tev.service
+
+                  # Create postinst script to handle service setup
+                  mkdir -p mypackage/DEBIAN
+                  cat > mypackage/DEBIAN/postinst << 'POSTINST_EOF'
+                  #!/bin/bash
+                  set -e
+
+                  # Reload systemd
+                  systemctl daemon-reload
+
+                  # Enable service (but don't start it yet)
+                  systemctl enable simeis-tev
+
+                  echo "TEV Simeis Server installed successfully"
+                  echo "To start the service: sudo systemctl start simeis-tev"
+                  echo "To check status: sudo systemctl status simeis-tev"
+                  echo "To view logs: sudo journalctl -u simeis-tev -f"
+                  POSTINST_EOF
+                  chmod +x mypackage/DEBIAN/postinst
+
                   dpkg-deb --build mypackage "TEV_${VERSION_CLEANED}.deb"
               shell: bash
 
@@ -313,31 +340,129 @@ jobs:
               run: |
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "mkdir -p /home/student/TEV"
                   scp -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ./artifacts/TEV_${VERSION_CLEANED}.deb ${{ vars.VPS_USER }}@${{ vars.VPS_IP }}:/home/student/TEV/TEV_${VERSION_CLEANED}.deb
               shell: bash
 
-            - name: 🛠️ Install .deb and restart service on VPS
+            - name: 🛠️ Install .deb and setup service on VPS
               run: |
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
-                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "cd /home/student/TEV && sudo dpkg -i TEV_${VERSION_CLEANED}.deb && sudo systemctl daemon-reload && sudo systemctl restart simeis-tev"
+
+                  echo "📦 Installing .deb package..."
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "cd /home/student/TEV && sudo dpkg -i TEV_${VERSION_CLEANED}.deb || true"
+
+                  echo "🔧 Ensuring systemd is reloaded..."
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo systemctl daemon-reload"
+
+                  echo "🔧 Enabling service..."
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo systemctl enable simeis-tev"
+
+                  echo "🔄 Starting service..."
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo systemctl restart simeis-tev"
+              shell: bash
+
+            - name: 🔍 Diagnose service status
+              run: |
+                  echo "🔍 Checking service status..."
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo systemctl status simeis-tev --no-pager --full || true"
+
+                  echo ""
+                  echo "📋 Checking service logs (last 20 lines)..."
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo journalctl -u simeis-tev --lines=20 --no-pager || true"
+
+                  echo ""
+                  echo "🔍 Checking if binary exists and is executable..."
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "ls -la /usr/bin/tev-simeis || true"
+
+                  echo ""
+                  echo "🔍 Testing binary directly..."
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "timeout 5 /usr/bin/tev-simeis || echo 'Binary test completed with exit code: $?'"
+              shell: bash
+
+            - name: ⏳ Wait for service startup
+              run: |
+                  echo "⏳ Waiting for service to be ready..."
+                  MAX_ATTEMPTS=30
+                  ATTEMPT=1
+
+                  while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+                    STATUS=$(ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo systemctl is-active simeis-tev 2>/dev/null || echo 'inactive'")
+                    echo "🔄 Attempt $ATTEMPT/$MAX_ATTEMPTS: Service status is '$STATUS'"
+                    
+                    if [ "$STATUS" = "active" ]; then
+                      echo "✅ Service is active!"
+                      break
+                    fi
+                    
+                    if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+                      echo "❌ Service did not start after $MAX_ATTEMPTS attempts"
+                      echo "📋 Final service status:"
+                      ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo systemctl status simeis-tev --no-pager --full || true"
+                      echo "📋 Recent logs:"
+                      ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo journalctl -u simeis-tev --since='2 minutes ago' --no-pager || true"
+                      exit 1
+                    fi
+                    
+                    sleep 2
+                    ATTEMPT=$((ATTEMPT + 1))
+                  done
               shell: bash
 
             - name: 🧪 Test /version endpoint
               run: |
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
-                  set -e
-                  # Test HTTP connectivity and version
-                  RESPONSE=$(curl -s --max-time 10 http://${{ vars.VPS_IP }}:6667/version || true)
-                  echo "Response: $RESPONSE"
-                  if [ -z "$RESPONSE" ]; then
-                    echo "❌ No response from server" >&2
+
+                  echo "🌐 Testing connectivity to ${{ vars.VPS_IP }}:6667..."
+
+                  # Test with multiple attempts
+                  MAX_ATTEMPTS=10
+                  ATTEMPT=1
+                  SUCCESS=false
+
+                  while [ $ATTEMPT -le $MAX_ATTEMPTS ] && [ "$SUCCESS" = "false" ]; do
+                    echo "🔄 Attempt $ATTEMPT/$MAX_ATTEMPTS: Testing /version endpoint..."
+                    
+                    RESPONSE=$(curl -s --max-time 30 --connect-timeout 10 http://${{ vars.VPS_IP }}:6667/version || echo "")
+                    
+                    if [ -n "$RESPONSE" ]; then
+                      echo "✅ Got response: $RESPONSE"
+                      
+                      if echo "$RESPONSE" | grep -q "$VERSION_CLEANED"; then
+                        echo "✅ Version matches: $VERSION_CLEANED found in response"
+                        SUCCESS=true
+                      else
+                        echo "⚠️ Version mismatch: expected $VERSION_CLEANED, got $RESPONSE"
+                        echo "🔄 Will retry in case of slow startup..."
+                      fi
+                    else
+                      echo "❌ No response from server on attempt $ATTEMPT"
+                    fi
+                    
+                    if [ "$SUCCESS" = "false" ] && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; then
+                      echo "⏳ Waiting 10 seconds before next attempt..."
+                      sleep 10
+                    fi
+                    
+                    ATTEMPT=$((ATTEMPT + 1))
+                  done
+
+                  if [ "$SUCCESS" = "false" ]; then
+                    echo ""
+                    echo "💥 FINAL DIAGNOSTICS:"
+                    echo "🔍 Service status:"
+                    ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo systemctl status simeis-tev --no-pager --full || true"
+                    echo ""
+                    echo "🔍 Recent service logs:"
+                    ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo journalctl -u simeis-tev --since='5 minutes ago' --no-pager || true"
+                    echo ""
+                    echo "🔍 Network connectivity check:"
+                    ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "sudo netstat -tlnp | grep 6667 || echo 'Port 6667 not found in listening ports'"
+                    echo ""
+                    echo "🔍 Process check:"
+                    ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "ps aux | grep tev-simeis | grep -v grep || echo 'No tev-simeis process found'"
+                    echo "❌ All connection attempts failed"
                     exit 1
                   fi
-                  if ! echo "$RESPONSE" | grep -q "$VERSION_CLEANED"; then
-                    echo "❌ Version mismatch: expected $VERSION_CLEANED, got $RESPONSE" >&2
-                    exit 1
-                  fi
-                  echo "✅ Version OK: $RESPONSE"
               shell: bash
