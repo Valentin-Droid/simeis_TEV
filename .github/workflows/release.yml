@@ -50,7 +50,6 @@ jobs:
               run: |
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
-                  VERSION_CLEANED="${VERSION_CLEANED#V}"
                   docker build -f .github/Dockerfile -t simeis-server:${VERSION_CLEANED} .
               shell: bash
 
@@ -58,7 +57,6 @@ jobs:
               run: |
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
-                  VERSION_CLEANED="${VERSION_CLEANED#V}"
                   docker image save simeis-server:${VERSION_CLEANED} -o simeis-server-docker-image.tar
               shell: bash
 
@@ -66,7 +64,6 @@ jobs:
               run: |
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
-                  VERSION_CLEANED="${VERSION_CLEANED#V}"
                   docker run -d --rm -p 8080:8080 --name simeis-server-test simeis-server:${VERSION_CLEANED}
                   sleep 5
                   docker ps | grep simeis-server-test
@@ -82,7 +79,6 @@ jobs:
               run: |
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
-                  VERSION_CLEANED="${VERSION_CLEANED#V}"
                   IMAGE_NAME=${{ secrets.DOCKERHUB_USERNAME }}/simeis-server:${VERSION_CLEANED}
                   docker tag simeis-server:${VERSION_CLEANED} $IMAGE_NAME
                   docker push $IMAGE_NAME
@@ -99,7 +95,6 @@ jobs:
               run: |
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
-                  VERSION_CLEANED="${VERSION_CLEANED#V}"
                   mkdir -p mypackage/DEBIAN
                   echo "Package: tev-simeis-server" > mypackage/DEBIAN/control
                   echo "Version: ${VERSION_CLEANED}" >> mypackage/DEBIAN/control
