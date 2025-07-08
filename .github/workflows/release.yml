@@ -95,9 +95,10 @@ jobs:
               run: |
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
+                  VERSION_DEB="${VERSION_CLEANED#V}"
                   mkdir -p mypackage/DEBIAN
                   echo "Package: tev-simeis-server" > mypackage/DEBIAN/control
-                  echo "Version: ${VERSION_CLEANED}" >> mypackage/DEBIAN/control
+                  echo "Version: ${VERSION_DEB}" >> mypackage/DEBIAN/control
                   echo "Section: base" >> mypackage/DEBIAN/control
                   echo "Priority: optional" >> mypackage/DEBIAN/control
                   echo "Architecture: amd64" >> mypackage/DEBIAN/control
@@ -145,7 +146,6 @@ jobs:
                   cp target/${{ matrix.target }}/release/simeis-server${{ matrix.extension }} release-artifacts/simeis-server-${{ matrix.suffix }}${{ matrix.extension }}
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
-                  VERSION_CLEANED="${VERSION_CLEANED#V}"
                   if [ -f "TEV_${VERSION_CLEANED}.deb" ]; then cp "TEV_${VERSION_CLEANED}.deb" release-artifacts/TEV_${VERSION_CLEANED}.deb; fi
                   ls -lh release-artifacts
               shell: bash
@@ -156,7 +156,6 @@ jobs:
                   cp doc/manual.pdf release-artifacts/simeis-manual.pdf
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
-                  VERSION_CLEANED="${VERSION_CLEANED#V}"
                   tar -czf release-artifacts/simeis-source-${VERSION_CLEANED}.tar.gz \
                     --exclude=target \
                     --exclude=.git \
