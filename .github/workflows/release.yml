@@ -320,7 +320,7 @@ jobs:
               run: |
                   VERSION="${{ github.event.pull_request.base.ref }}"
                   VERSION_CLEANED="${VERSION#release/}"
-                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "cd /home/student/TEV && sudo dpkg -i TEV_${VERSION_CLEANED}.deb && sudo systemctl restart simeis.service.tev"
+                  ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ vars.VPS_USER }}@${{ vars.VPS_IP }} "cd /home/student/TEV && sudo dpkg -i TEV_${VERSION_CLEANED}.deb && sudo systemctl daemon-reload && sudo systemctl restart simeis.service.tev"
               shell: bash
 
             - name: 🧪 Test /version endpoint
